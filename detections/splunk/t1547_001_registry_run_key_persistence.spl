@@ -1,0 +1,1 @@
+EventID=13 TargetObject IN ("*\\Microsoft\\Windows\\CurrentVersion\\Run\\*", "*\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\*") NOT (Image IN ("*\\reg.exe", "*\\powershell.exe"))
