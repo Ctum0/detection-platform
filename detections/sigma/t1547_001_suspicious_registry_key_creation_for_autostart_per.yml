@@ -1,0 +1,38 @@
+title: Suspicious Registry Key Creation for AutoStart Persistence
+id: 9f1a8c2d-3e4b-4f7a-8d9e-0c1b2a3d4e5f
+status: experimental
+description: Detects creation of registry keys in Boot or Logon Autostart Execution locations that may indicate persistence mechanism.
+logsource:
+  product: windows
+  category: registry_event
+  service: sysmon
+detection:
+  selection:
+    EventID: 12
+    TargetObject|contains:
+      - '\Microsoft\Windows\CurrentVersion\Run'
+      - '\Microsoft\Windows\CurrentVersion\RunOnce'
+      - '\Microsoft\Windows\CurrentVersion\RunServices'
+      - '\Microsoft\Windows\CurrentVersion\RunOnceServices'
+      - '\Policies\Microsoft\Windows\System\Scripts\Logon'
+      - '\Policies\Microsoft\Windows\System\Scripts\Startup'
+      - '\Microsoft\Windows NT\CurrentVersion\Winlogon\Userinit'
+      - '\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell'
+  filter_known:
+    Image|endswith:
+      - '\REG.EXE'
+      - '\REGSRV32.EXE'
+      - '\REGUTIL.DLL'
+    TargetObject|contains:
+      - '\CurrentVersion\Run'
+      - '\CurrentVersion\RunOnce'
+  condition: selection and not filter_known
+falsepositives:
+  - Legitimate software installers adding startup entries
+  - Group Policy Object updates modifying startup scripts
+  - Administrative scripts modifying auto-start configurations
+  - System maintenance tasks adding temporary startup entries
+level: high
+tags:
+  - attack.persistence
+  - attack.t1547.001
