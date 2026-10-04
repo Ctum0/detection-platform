@@ -1,23 +1,28 @@
 # CI/CD workflows
 
-How the two GitHub Actions workflows in `.github/workflows/` turn a Sigma
+How the three GitHub Actions workflows in `.github/workflows/` turn a Sigma
 rule into a live Wazuh alert, and why they're built the way they are.
 
 ## Overview
 
-Two workflows, two different trust boundaries:
+Three workflows, two different trust boundaries:
 
 - **CI — `validate.yml`** (`Validate Sigma rules`): GitHub-hosted runner,
   no access to the lab. Its only job is to keep `detections/sigma/`
   honest — syntax-check every rule and keep the auto-generated Splunk
   SPL in sync with it.
+- **Convert — `convert-deploy.yml`** (`Convert Sigma to Wazuh and
+  deploy`): GitHub-hosted runner. After CI passes on `main`, turns new
+  Sigma rules into Wazuh rules, merges them into
+  `detections/wazuh/custom_rules.xml` and starts the CD workflow.
 - **CD — `deploy-wazuh.yml`** (`Deploy rules to Wazuh`): self-hosted
   runner living on the same VPS as the Wazuh manager. Its job is to get
   `detections/wazuh/custom_rules.xml` onto that manager and confirm it's
   actually live, not just uploaded.
 
-Both trigger on push-to-`main` for the paths they care about; CI also
-runs on pull requests (read-only there — see below).
+CI and CD trigger on push-to-`main` for the paths they care about; CI also
+runs on pull requests (read-only there — see below). Convert runs after CI
+succeeds on `main` and starts CD itself (see below).
 
 ## CI — Validate Sigma rules
 
@@ -45,6 +50,39 @@ workflow file itself.
    'pull_request'`: a fork's PR can't push back credentials it doesn't
    have, and `[skip ci]` guarantees this autocommit never re-triggers
    itself into a loop.
+
+## Convert — Sigma to Wazuh
+
+Trigger: `workflow_run` on **Validate Sigma rules** completing successfully
+for a push to `main` (pull-request runs are ignored), or manual dispatch.
+Running after CI instead of alongside it means the Sigma has already passed
+`sigma check` and CI's own SPL autocommit has landed, so the two never race
+to push.
+
+1. **Convert** — `platform/converters/sigma_to_wazuh.py --anchor if_group`
+   regenerates every Sigma rule into `/tmp/fresh_rules.xml`. Rules it
+   cannot express faithfully (`or`, multi-field negated filters, unmapped
+   fields) are skipped with a reason, never emitted with different logic.
+2. **Merge** — `platform/converters/merge_wazuh_rules.py` merges that into
+   the live `custom_rules.xml`. Rules are matched by Sigma identity
+   (`<file> :: <title>`), recorded with their deployed ID in
+   `platform/converters/wazuh_rule_ids.json`, not by the converter's
+   positional IDs (those shift whenever a Sigma file is added). Hand-tuned
+   live rules win; live-only tuning rules (100013, 100020) are kept; new
+   rules get the next free ID. With nothing new the file is left
+   byte-identical, so "No Wazuh changes" is a reliable signal.
+3. **Validate** — the merged file must parse and every rule ID must be
+   unique.
+4. **Commit and dispatch** — new rules are committed to `main` (with a
+   rebase and retry), then `deploy-wazuh.yml` is started with
+   `gh workflow run`. A push made with `GITHUB_TOKEN` never triggers
+   other workflows, so relying on CD's push trigger would silently skip
+   the deploy; `workflow_dispatch` is the documented exception.
+
+Known limitations: renaming a Sigma file or its `title` gives it a new
+identity, so it would be added again under a new ID next to the old live
+rule (update `wazuh_rule_ids.json` in the same commit when renaming).
+Temporal correlations (DET-010) have no Wazuh equivalent and stay manual.
 
 ## CD — Deploy rules to Wazuh
 

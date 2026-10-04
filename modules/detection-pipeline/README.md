@@ -1,6 +1,6 @@
 # Detection Pipeline
 
-**Status: COMPLETE** — ART campaign complete for Windows; 9/12 detections
+**Status: COMPLETE** — ART campaign complete for Windows; 9/13 detections
 validated end-to-end (attack → alert), Sigma → CI → CD → Wazuh pipeline
 proven live.
 
@@ -14,7 +14,7 @@ proven by actually running the attack it's built to catch.
 ```text
 detection-pipeline/
 └── docs/
-    ├── attack-matrix.md      ← all 12 detections at a glance
+    ├── attack-matrix.md      ← all 13 detections at a glance
     ├── detections/           ← one doc per detection (det-001...det-012)
     ├── pipeline-demo/        ← DET-012 end-to-end CI/CD walkthrough
     └── known-limitations.md  ← open gaps (auditd ingestion, L-001)
@@ -94,16 +94,20 @@ Full detail per row: `docs/attack-matrix.md`. Per-detection writeups
 
 ## Metrics
 
-- **Detections:** 12 (DET-001...DET-012) across 10 ATT&CK techniques —
+- **Detections:** 13 (DET-001...DET-013) across 11 ATT&CK techniques —
   see `docs/attack-matrix.md`
-- **Validated:** 9/12 — DET-001, DET-002, DET-003, DET-004, DET-005,
+- **Validated:** 9/13 — DET-001, DET-002, DET-003, DET-004, DET-005,
   DET-006, DET-007, DET-011, DET-012
 - **Untested:** DET-008, DET-009 (blocked by the auditd ingestion gap,
   `docs/known-limitations.md` L-001), DET-010 (manual-deployment only,
   temporal correlation has no Wazuh equivalent)
-- **Sigma rules:** 12 files, spec v2.1, `sigma check` clean
-- **Wazuh rules:** 12 custom rules, IDs 100001-100012
-- **Splunk SPL:** 11 auto-generated searches (DET-010 excluded)
+- **Pending:** DET-013 (T1547.001, first AI-proposed rule) — merged
+  2026-10-04, awaiting its Wazuh deploy and ART run
+- **Sigma rules:** 13 files, spec v2.1, `sigma check` clean
+- **Wazuh rules:** 14 custom rules — 12 converted from Sigma (IDs
+  100001-100012) plus hand-written tuning rules 100013 and 100020; new
+  Sigma rules are converted and deployed by `convert-deploy.yml`
+- **Splunk SPL:** 12 auto-generated searches (DET-010 excluded)
 - **Evidence:** indexed in `shared/evidence-index.md`, files in
   `shared/evidence/`
 

@@ -33,14 +33,15 @@ Wazuh Manager (VPS, docker single-node)  -->  Wazuh Indexer + Dashboard
   |                        |
   |                        +--> (planned) Splunk forwarding
   v
-Detections (Sigma as code -> CI -> CD -> Wazuh)
+Detections (Sigma as code -> CI -> convert -> CD -> Wazuh)
+  ^   AI loop: Detection Gap Analyst (n8n) drafts a Sigma PR ->
+  |   Operator Console human approve/reject -> merge
+  v
+Alerts -> SOAR (n8n): filter -> dedup -> AbuseIPDB -> AI triage ->
+Telegram -> human decision; Investigation (Threat Hunting)
   |
   v
-Alerts -> Investigation (Threat Hunting)
-  |
-  v
-(planned) Threat intel feedback -> SOAR: enrichment -> AI summary ->
-case mgmt -> human decision
+(planned) Threat intel feedback (honeypots, MISP/OpenCTI) -> detections
 ```
 
 Full platform architecture (network, hosts, remote access) is in
@@ -50,14 +51,14 @@ Full platform architecture (network, hosts, remote access) is in
 
 | Module | Focus | Status |
 |---|---|---|
-| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 12 rules, 9 validated | ✅ Complete |
+| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 13 rules (1 AI-proposed), 9 validated | ✅ Complete |
 | [Adversary Emulation](modules/adversary-emulation/README.md) | ART campaign, purple-team loop; AD domain phase (planned) | 🔨 Workstream 1 complete · AD phase planned |
 | [Cloud & Identity Security](modules/cloud-identity/README.md) | Entra ID / AWS monitoring, IaC scanning | 🗓 Planned |
 | [SOAR & Automated Response](modules/soar/README.md) | Wazuh alerts → n8n pipeline → enrichment → AI triage → Telegram, human-in-the-loop | ✅ Complete |
 | [Threat Intelligence](modules/threat-intel/README.md) | Honeypots (Cowrie/T-Pot), MISP/OpenCTI, IOC feedback into Detection Pipeline | ⬜ Not started |
 
-The Detection Pipeline module's 9/12 is the actual current count — see
-Metrics below for exactly which three remain untested and why.
+The Detection Pipeline module's 9/13 is the actual current count — see
+Metrics below for exactly which four are not yet validated and why.
 
 ## Platform architecture
 
@@ -121,16 +122,23 @@ way Detection Pipeline and Adversary Emulation already do.
 
 ## Metrics
 
-- **Detections:** 12 (DET-001…DET-012) across 10 ATT&CK techniques — see
+- **Detections:** 13 (DET-001…DET-013) across 11 ATT&CK techniques — see
   `modules/detection-pipeline/docs/attack-matrix.md`
-- **Validated:** 9/12 (DET-001, DET-002, DET-003, DET-004, DET-005,
+- **Validated:** 9/13 (DET-001, DET-002, DET-003, DET-004, DET-005,
   DET-006, DET-007, DET-011, DET-012)
 - **Untested:** DET-008/DET-009 — blocked by an auditd ingestion gap (see
   `modules/detection-pipeline/docs/known-limitations.md`); DET-010 —
   manual deployment only (temporal correlation, no Wazuh equivalent)
-- **Sigma rules:** 12 files (spec v2.1, `sigma check` clean)
-- **Wazuh rules:** 12 custom rules, IDs 100001–100012
-- **Splunk SPL:** 11 auto-generated searches (DET-010 excluded)
+- **Pending:** DET-013 — first AI-proposed rule (T1547.001), merged
+  2026-10-04 after human review; awaiting its Wazuh deploy and ART run
+- **Sigma rules:** 13 files (spec v2.1, `sigma check` clean)
+- **Wazuh rules:** 14 custom rules — 12 converted from Sigma (IDs
+  100001–100012) and 2 hand-written tuning rules (100013, 100020). New
+  Sigma rules are converted and deployed by `convert-deploy.yml`
+- **Splunk SPL:** 12 auto-generated searches (DET-010 excluded)
+- **AI detection loop:** Detection Gap Analyst (n8n) drafts a Sigma rule
+  and PR → Operator Console (human gate, merges only on green CI) →
+  convert-deploy → Wazuh
 - **SOAR pipeline:** 9 n8n nodes, Wazuh alert to Telegram in roughly 2–3
   minutes (most of it the AI step), with cross-execution deduplication via
   the Remove Duplicates node. Module doc: `modules/soar/README.md`.
@@ -152,10 +160,10 @@ detection-platform/
 │   ├── adversary-emulation/
 │   │   └── docs/                ← campaign-log.md
 │   ├── cloud-identity/          ← README only (not started)
-│   ├── soar/                    ← README only (not started)
+│   ├── soar/                    ← README, workflow-export.json, docs/war-story.md
 │   └── threat-intel/            ← README only (not started)
 ├── platform/
-│   ├── converters/              ← sigma_to_wazuh.py
+│   ├── converters/              ← sigma_to_wazuh.py, merge_wazuh_rules.py, wazuh_rule_ids.json
 │   ├── pipelines/               ← Sigma conversion pipeline configs
 │   └── workflows-docs.md        ← how CI + CD actually work
 ├── shared/
@@ -165,11 +173,11 @@ detection-platform/
 │   ├── evidence-index.md        ← screenshot index
 │   └── lessons-learned.md       ← distilled lessons across modules
 ├── detections/
-│   ├── sigma/                   ← source of truth (12 rules)
+│   ├── sigma/                   ← source of truth (13 rules)
 │   ├── wazuh/                   ← custom_rules.xml, DEPLOY-NOTES.md
 │   └── splunk/                  ← CI-generated *.spl (never hand-edited)
 ├── attack-tests/                ← one writeup per validated technique
-└── .github/workflows/           ← CI: validate + SPL autogen; CD: Wazuh deploy
+└── .github/workflows/           ← CI: validate + SPL autogen; convert Sigma→Wazuh; CD: Wazuh deploy
 ```
 
 ## Author

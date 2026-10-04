@@ -1,6 +1,6 @@
 # Attack matrix
 
-All 12 detections: technique → data source → artifacts → status.
+All 13 detections: technique → data source → artifacts → status.
 Per-detection writeups live in `docs/detections/det-*.md`; screenshot
 evidence is indexed in `shared/evidence-index.md`.
 
@@ -18,9 +18,10 @@ evidence is indexed in `shared/evidence-index.md`.
 | DET-010 | T1110.001 Password Guessing | Credential Access | auth.log (sshd), temporal correlation | `ssh_success_after_failures.yml` | SKIP (temporal_ordered unsupported) | — (excluded from SPL autogen) | UNTESTED | Manual deployment only; needs parsed `src_ip`; not part of W1 scope |
 | DET-011 | T1685.005 Clear Windows Event Logs | Defense Impairment | Windows Security 1102 via Wazuh agent | `security_log_cleared.yml` | 100007 (parent fixed to `if_sid 63103`) | `security_log_cleared.spl` | VALIDATED 2026-09-27 | `wevtutil cl Security` → 1102, 100007 fired after parent-ID fix (was `if_group windows_security`, never fired); MITRE restructured 2026: ex-T1070.001 |
 | DET-012 | T1098 (canary) | Execution | Sysmon EID 1 via Wazuh agent | `notepad_execution.yml` | 100012 | `notepad_execution.spl` | VALIDATED 2026-09-27 | Pipeline canary: commit -> CI -> deploy -> notepad run -> alert; see `docs/pipeline-demo/` |
+| DET-013 | T1547.001 Registry Run Keys / Startup Folder | Persistence | Sysmon EID 13 (registry_set) via Wazuh agent | `t1547_001_registry_run_key_persistence_via_setvalue.yml` | assigned by convert-deploy on first run (expected 100021) | `t1547_001_registry_run_key_persistence_via_setvalue.spl` | MERGED 2026-10-04 — pending Wazuh deploy + ART validation | First AI-proposed rule: Detection Gap Analyst draft, PR #7, approved in the Operator Console after logic review |
 
-Coverage: 10 distinct techniques across Credential Access, Execution,
-Persistence, Privilege Escalation and Defense Impairment. 9/12 validated —
+Coverage: 11 distinct techniques across Credential Access, Execution,
+Persistence, Privilege Escalation and Defense Impairment. 9/13 validated —
 ART Workstream 1 (Windows campaign, see
 `../../adversary-emulation/docs/campaign-log.md`) closed out DET-003,
 DET-004, DET-007 and DET-011 on 2026-09-27. DET-008/DET-009 remain
