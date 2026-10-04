@@ -1,0 +1,35 @@
+title: Suspicious Registry Run Key Creation for Persistence
+id: 8c3e7a1b-4f2d-4e8a-9c3d-1a2b3c4d5e6f
+status: experimental
+description: Detects creation or modification of registry Run key entries that may indicate persistence mechanism installation. This targets HKLM and HKCU registry paths used for autostart execution.
+logsource:
+  product: windows
+  category: registry_event
+detection:
+  selection_run_keys:
+    TargetObject|contains:
+      - '\Microsoft\Windows\CurrentVersion\Run\'
+      - '\Microsoft\Windows\CurrentVersion\RunOnce\'
+      - '\Microsoft\Windows\CurrentVersion\RunServices\'
+      - '\Microsoft\Windows\CurrentVersion\RunOnceServices\'
+  selection_startup_folder:
+    TargetObject|contains: '\Microsoft\Windows\Start Menu\Programs\Startup\'
+  selection_image:
+    Image|endswith:
+      - '\reg.exe'
+      - '\regedit.exe'
+      - '\powershell.exe'
+  filter_legitimate:
+    ParentImage|contains:
+      - '\setup.exe'
+      - '\installer.exe'
+      - '\msiexec.exe'
+  condition: all of selection_* and not filter_legitimate
+falsepositives:
+  - Legitimate software installations that add startup entries
+  - Administrative tasks to configure system policies
+  - Enterprise management tools configuring deployment
+level: high
+tags:
+  - attack.persistence
+  - attack.t1547.001
