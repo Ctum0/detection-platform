@@ -60,13 +60,38 @@ FIELD_MAP = {
     "ImagePath": "win.eventdata.imagePath",
     "ServiceName": "win.eventdata.serviceName",
     "DestinationIp": "win.eventdata.destinationIp",
+    "TargetObject": "win.eventdata.targetObject",
+    "Details": "win.eventdata.details",
+    "EventType": "win.eventdata.eventType",
+    "ImageLoaded": "win.eventdata.imageLoaded",
+    "OriginalFileName": "win.eventdata.originalFileName",
+    "ParentCommandLine": "win.eventdata.parentCommandLine",
+    "User": "win.eventdata.user",
     "EventID": "win.system.eventID",
 }
 
 # Stock Wazuh sysmon parents (0595-win-sysmon_rules.xml, 4.x ruleset).
 SYSMON_PARENTS = {
     1: {"sid": "61603", "group": "sysmon_event1"},
+    7: {"sid": "61609", "group": "sysmon_event7"},
     10: {"sid": "61612", "group": "sysmon_event_10"},
+    11: {"sid": "61613", "group": "sysmon_event_11"},
+    12: {"sid": "61614", "group": "sysmon_event_12"},
+    13: {"sid": "61615", "group": "sysmon_event_13"},
+    14: {"sid": "61616", "group": "sysmon_event_14"},
+}
+
+# Sigma Sysmon category -> default Sysmon event ID (verified against the live
+# 0595-win-sysmon_rules.xml, Wazuh 4.14).
+SYSMON_CATEGORY_EID = {
+    "process_creation": 1,
+    "image_load": 7,
+    "process_access": 10,
+    "file_event": 11,
+    "registry_add": 12,
+    "registry_delete": 12,
+    "registry_set": 13,
+    "registry_rename": 14,
 }
 
 SIGMA_LEVEL_TO_WAZUH = {
@@ -89,6 +114,7 @@ MITRE = {
     "T1136.001": ("Persistence", "Local Account"),
     "T1053.005": ("Persistence", "Scheduled Task"),
     "T1543.003": ("Persistence", "Windows Service"),
+    "T1547.001": ("Persistence", "Registry Run Keys / Startup Folder"),
     "T1548.001": ("Privilege Escalation", "Setuid and Setgid"),
     "T1110.001": ("Credential Access", "Password Guessing"),
     "T1685.005": ("Defense Impairment", "Clear Windows Event Logs"),
@@ -198,6 +224,53 @@ def exact_pattern(values):
     return pcre2_alt(values, prefix="^", suffix="$")
 
 
+def startswith_pattern(values):
+    return pcre2_alt(values, prefix="^")
+
+
+def contains_all_pattern(values):
+    # One PCRE2 lookahead per value: every value must appear, in any order.
+    return "(?i)^" + "".join(f"(?=.*{re.escape(str(v))})" for v in values)
+
+
+def resolve_condition(condition, names):
+    """Translate a Sigma condition into [(selection_name, negated), ...].
+
+    Only conjunctions are supported: `a and b`, `not f`, `all of x*`, and
+    `1 of x*` when it matches exactly one item. Returns a reason string for
+    anything else (or, parentheses, ambiguous `1 of`), because emitting a
+    wrong rule is worse than skipping one."""
+    if not isinstance(condition, str) or not condition.strip():
+        return "missing or non-string condition"
+    text = condition.strip()
+    if re.search(r"[()]|\bor\b|\|", text):
+        return f"condition '{text}' uses or/parentheses (not translatable to one Wazuh rule)"
+    out = []
+    for part in re.split(r"\s+and\s+", text):
+        part = part.strip()
+        negated = part.startswith("not ")
+        if negated:
+            part = part[4:].strip()
+        m = re.fullmatch(r"(all|1|any) of (\S+)", part)
+        if m:
+            quant, pat = m.groups()
+            hits = [n for n in names if (n.startswith(pat[:-1]) if pat.endswith("*") else n == pat)]
+            if not hits:
+                return f"'{part}' matches no detection item"
+            if quant != "all" and len(hits) > 1:
+                return f"'{part}' is an OR over {len(hits)} items (not translatable to one Wazuh rule)"
+            if negated and quant == "all" and len(hits) > 1:
+                return f"'not {part}' negates a conjunction (not translatable)"
+            out.extend((h, negated) for h in hits)
+        elif re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", part):
+            if part not in names:
+                return f"condition references undefined item '{part}'"
+            out.append((part, negated))
+        else:
+            return f"unsupported condition fragment '{part}'"
+    return out
+
+
 def add_field(rule_el, wazuh_field, pattern, use_regex=True):
     f = ET.SubElement(rule_el, "field")
     f.set("name", wazuh_field)
@@ -208,10 +281,11 @@ def add_field(rule_el, wazuh_field, pattern, use_regex=True):
 
 
 def add_mitre(rule_el, doc, technique):
+    # Wazuh's <mitre> block only accepts <id> (4.14 analysisd rejects
+    # <tactic>/<technique> with "Invalid option"); Wazuh resolves the tactic
+    # and name from its own MITRE database.
     m = ET.SubElement(rule_el, "mitre")
     ET.SubElement(m, "id").text = technique
-    ET.SubElement(m, "tactic").text = tactic_of(doc, technique)
-    ET.SubElement(m, "technique").text = technique_name(technique)
 
 
 def finish_rule(rule_el, doc, technique):
@@ -232,18 +306,22 @@ def parse_timespan(span):
 # --------------------------------------------------------------------------
 
 def translate_windows(rule_el, doc, anchor):
-    """Sysmon + Windows Security/System channel rules -> win.* fields."""
+    """Sysmon + Windows Security/System channel rules -> win.* fields.
+
+    Returns True when the rule body was emitted, False for a log source this
+    translator does not handle, or a reason string when the rule cannot be
+    expressed faithfully (it is then skipped rather than emitted wrong)."""
     logsource = doc.get("logsource", {})
     detection = doc.get("detection", {})
     category = logsource.get("category")
     service = logsource.get("service")
 
-    if category in ("process_creation", "process_access"):
+    if category in SYSMON_CATEGORY_EID:
         event_id = None
         for sel in detection.values():
             if isinstance(sel, dict) and "EventID" in sel:
                 event_id = sel["EventID"]
-        event_id = event_id or (1 if category == "process_creation" else 10)
+        event_id = event_id if event_id in SYSMON_PARENTS else SYSMON_CATEGORY_EID[category]
         parent = SYSMON_PARENTS[event_id]
         anchor_el = ET.SubElement(
             rule_el, "if_sid" if anchor == "if_sid" else "if_group"
@@ -261,23 +339,48 @@ def translate_windows(rule_el, doc, anchor):
     else:
         return False
 
-    for sel_name, sel in detection.items():
-        if sel_name == "condition" or not isinstance(sel, dict):
-            continue
+    names = [k for k in detection if k != "condition"]
+    plan = resolve_condition(detection.get("condition"), names)
+    if isinstance(plan, str):
+        return plan
+
+    for sel_name, negated in plan:
+        sel = detection[sel_name]
+        if not isinstance(sel, dict):
+            return f"item '{sel_name}' is not a field mapping (keyword lists are not translatable)"
+        if negated and len(sel) != 1:
+            # NOT (a AND b) cannot be written as per-field negation.
+            return f"'not {sel_name}' has {len(sel)} fields; only single-field filters can be negated"
         for key, value in sel.items():
             field, op = split_field_op(key)
             if field not in FIELD_MAP:
-                continue
+                return f"field '{field}' has no Wazuh mapping"
             values = value if isinstance(value, list) else [value]
             wfield = FIELD_MAP[field]
             if field == "EventID":
+                if negated:
+                    return "negated EventID is not supported"
                 add_field(rule_el, wfield, f"^{values[0]}$", use_regex=False)
-            elif op == "endswith":
-                add_field(rule_el, wfield, endswith_pattern(values))
+                continue
+            if op == "endswith":
+                pattern = endswith_pattern(values)
+            elif op == "startswith":
+                pattern = startswith_pattern(values)
+            elif op == "contains|all":
+                pattern = contains_all_pattern(values)
+            elif op == "re":
+                if len(values) != 1:
+                    return f"'{key}' has several regexes"
+                pattern = str(values[0])
             elif op in ("contains", None) and field != "GrantedAccess":
-                add_field(rule_el, wfield, contains_pattern(values))
-            else:  # GrantedAccess and friends: exact-mask semantics.
-                add_field(rule_el, wfield, exact_pattern(values))
+                pattern = contains_pattern(values)
+            elif op is None or op == "contains":  # GrantedAccess: exact-mask semantics.
+                pattern = exact_pattern(values)
+            else:
+                return f"operator '{op}' is not supported"
+            f_el = add_field(rule_el, wfield, pattern)
+            if negated:
+                f_el.set("negate", "yes")
     return True
 
 
@@ -432,13 +535,10 @@ def convert(sigma_dir, start_id, anchor):
                 if cls == "auditd"
                 else False
             )
-            if not ok:
-                print(
-                    f"WARN: {path.name}: unhandled logsource "
-                    f"{doc.get('logsource')}; skipped",
-                    file=sys.stderr,
-                )
-                skipped.append((f"{path.name}#{title}", "unhandled logsource"))
+            if ok is not True:
+                reason = ok if isinstance(ok, str) else f"unhandled logsource {doc.get('logsource')}"
+                print(f"WARN: {path.name}: {reason}; skipped", file=sys.stderr)
+                skipped.append((f"{path.name}#{title}", reason))
                 continue
             finish_rule(rule_el, doc, technique)
             if doc.get("name"):
@@ -450,19 +550,25 @@ def convert(sigma_dir, start_id, anchor):
     return rules_out, mapping, skipped
 
 
+def _comment_safe(text):
+    """XML comments may not contain "--" (it makes the file unparseable)."""
+    return re.sub(r"-{2,}", "-", str(text))
+
+
 def render(rules_out, mapping, skipped, start_id):
     lines = []
     lines.append("<!--")
-    lines.append("  Detection Platform custom Wazuh rules. GENERATED FILE -- do not")
+    lines.append("  Detection Platform custom Wazuh rules. GENERATED FILE: do not")
     lines.append("  edit by hand; regenerate with: python3 platform/converters/sigma_to_wazuh.py")
     lines.append(f"  Generated (UTC): {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%d %H:%M}")
     lines.append("  Rule ID <-> Sigma rule mapping:")
     for rid, fname, title in mapping:
+        fname, title = _comment_safe(fname), _comment_safe(title)
         lines.append(f"    {rid} <-> {fname} :: {title}")
     lines.append("  Skipped (no Wazuh equivalent):")
     if skipped:
         for name, reason in skipped:
-            lines.append(f"    SKIP {name} -- {reason}")
+            lines.append(f"    SKIP {name}: {_comment_safe(reason)}")
     else:
         lines.append("    (none)")
     lines.append("-->")
@@ -473,7 +579,7 @@ def render(rules_out, mapping, skipped, start_id):
         inner = "\n".join(
             line for line in pretty.splitlines()[1:] if line.strip()
         )
-        body.append(f"  <!-- {comment} -->")
+        body.append(f"  <!-- {_comment_safe(comment)} -->")
         body.append("  " + inner.replace("\n", "\n  "))
     body.append("</group>")
     return "\n".join(lines) + "\n" + "\n".join(body) + "\n"
