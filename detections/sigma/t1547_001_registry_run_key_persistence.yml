@@ -1,0 +1,27 @@
+title: Registry Run Key Persistence
+id: 7a3b5c8e-2f4d-4e6a-9c1b-8d3e5f7a9b0c
+status: experimental
+description: Detects unauthorized creation of registry values under Run keys, a common persistence mechanism used by attackers leveraging reg.exe or powershell.exe.
+logsource:
+  product: windows
+  category: registry_set
+  service: sysmon
+detection:
+  selection:
+    EventID: 13
+    TargetObject|contains:
+      - '\Microsoft\Windows\CurrentVersion\Run\'
+      - '\Microsoft\Windows\CurrentVersion\RunOnce\'
+  filter_known_tools:
+    Image|endswith:
+      - '\reg.exe'
+      - '\powershell.exe'
+  condition: selection and not filter_known_tools
+falsepositives:
+  - Legitimate software installers or update mechanisms writing to Run keys
+  - Administrative tools that programmatically modify Run registry keys
+  - Some antivirus or endpoint management software that uses registry auto-start
+level: high
+tags:
+  - attack.persistence
+  - attack.t1547.001
