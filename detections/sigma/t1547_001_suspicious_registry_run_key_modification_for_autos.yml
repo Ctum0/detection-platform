@@ -1,0 +1,41 @@
+title: Suspicious Registry Run Key Modification for Autostart Persistence
+id: a7c93e2b-4d8f-4a1c-9b3e-6f2d8c5b1a47
+status: experimental
+description: Detects modification of Windows registry Run keys for autostart persistence, which adversaries use to maintain access across reboots. This detection focuses on reg.exe commands targeting common autostart registry locations with suspicious paths.
+logsource:
+  product: windows
+  category: process_creation
+  service: sysmon
+detection:
+  selection_reg_exe:
+    Image|endswith: '\reg.exe'
+    CommandLine|contains: 'add'
+    CommandLine|contains: 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
+    CommandLine|contains: 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
+  selection_nonstandard_path:
+    Image|endswith: '\reg.exe'
+    CommandLine|contains|all:
+      - 'add'
+      - '/reg:64'
+    CommandLine|contains:
+      - '\\Temp\\'
+      - '\\Users\\Public\\'
+      - '\\AppData\\Local\\Temp\\'
+      - '\\Users\\Public\\'
+      - '.exe'
+  filter_legitimate:
+    ParentImage|contains:
+      - 'ADIDNT Tooling'
+      - 'Microsoft\\System\\Configuration'
+    Image|endswith: '\reg.exe'
+  condition: selection_reg_exe and not filter_legitimate and selection_nonstandard_path
+falsepositives:
+  - Legitimate software installers adding startup entries
+  - IT administrators configuring auto-login utilities
+  - Enterprise management tools (SCCM, Intune) deploying startup scripts
+  - Legacy applications using registry for configuration
+  - User-installed portable applications for persistence
+level: high
+tags:
+  - attack.persistence
+  - attack.t1547.001
