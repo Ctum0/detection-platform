@@ -8,12 +8,25 @@ name: Convert Sigma to Wazuh and deploy
 # A push made with GITHUB_TOKEN does not trigger other workflows, so the
 # deploy is started explicitly with workflow_dispatch (the documented
 # exception) instead of relying on deploy-wazuh.yml's push trigger.
+#
+# Known limitations: rules are matched by "<sigma file> :: <title>" (see
+# platform/converters/wazuh_rule_ids.json), so renaming a Sigma file or its
+# title adds it again under a new ID; update the map in the same commit.
+# Rules the converter cannot express faithfully are skipped with a reason.
+#
+# Manual runs can set dry_run to convert, merge and validate without
+# committing or deploying (shows the diff that would be shipped).
 "on":
   workflow_run:
     workflows: ["Validate Sigma rules"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Convert, merge and validate only; no commit, no deploy"
+        type: boolean
+        default: false
 
 concurrency:
   group: convert-deploy
@@ -71,7 +84,15 @@ jobs:
           print(f'OK: {len(ids)} rules, IDs unique')
           "
 
+      - name: Show what would be shipped (dry run)
+        if: inputs.dry_run
+        run: |
+          git --no-pager diff --stat
+          git --no-pager diff detections/wazuh/custom_rules.xml || true
+          echo "Dry run: nothing committed, nothing deployed."
+
       - name: Commit merged rules and dispatch the deploy
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
