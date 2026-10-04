@@ -20,10 +20,26 @@ python3 platform/converters/sigma_to_wazuh.py \
 python3 platform/converters/sigma_to_wazuh.py --anchor if_group   # Wazuh 4.9.0+
 ```
 
-Requires: python3 + pyyaml. Note: `detections/wazuh/custom_rules.xml` has
-been hand-tuned after generation (verified against the live Wazuh 4.14.8
-ruleset — see its header comment), so re-running the converter overwrites
-those fixes. Back up first, regenerate, then re-apply review deltas.
+Requires: python3 + pyyaml. `detections/wazuh/custom_rules.xml` has been
+hand-tuned after generation, so do not write the converter output over it.
+New rules reach it through the merge, which CI runs automatically
+(`.github/workflows/convert-deploy.yml`, after "Validate Sigma rules" passes
+on main):
+
+```bash
+python3 platform/converters/sigma_to_wazuh.py --anchor if_group --output /tmp/fresh_rules.xml
+python3 platform/converters/merge_wazuh_rules.py \
+    --fresh /tmp/fresh_rules.xml \
+    --live detections/wazuh/custom_rules.xml \
+    --map platform/converters/wazuh_rule_ids.json \
+    --output detections/wazuh/custom_rules.xml
+```
+
+The merge matches rules by Sigma identity (`<file> :: <title>`, recorded with
+the deployed rule ID in `platform/converters/wazuh_rule_ids.json`), not by the
+converter's positional IDs. Hand-tuned live rules always win, live-only
+tuning rules (100013, 100020) are kept, and new Sigma rules get the next free
+ID. With nothing new, the live file is left byte-identical.
 
 ## Mapping decisions
 
@@ -33,9 +49,20 @@ Generator defaults (flags: `--anchor if_sid`, `--start-id 100001`):
 |---|---|---|
 | Sysmon `process_creation` (EID 1) | `<if_sid>61603</if_sid>` (stock 0595 parent) | `sysmon_event1` |
 | Sysmon `process_access` (EID 10) | `<if_sid>61612</if_sid>` (stock 0595 parent) | `sysmon_event_10` |
+| Sysmon `image_load` (EID 7) | `<if_sid>61609</if_sid>` (stock 0595 parent) | `sysmon_event7` |
+| Sysmon `file_event` (EID 11) | `<if_sid>61613</if_sid>` (stock 0595 parent) | `sysmon_event_11` |
+| Sysmon `registry_add` / `registry_delete` (EID 12) | `<if_sid>61614</if_sid>` (stock 0595 parent) | `sysmon_event_12` |
+| Sysmon `registry_set` (EID 13) | `<if_sid>61615</if_sid>` (stock 0595 parent) | `sysmon_event_13` |
+| Sysmon `registry_rename` (EID 14) | `<if_sid>61616</if_sid>` (stock 0595 parent) | `sysmon_event_14` |
 | Windows `service: security/system` | `win.system.channel` + `win.system.eventID` fields | `windows_security` / `windows_system` |
 | Linux `service: auth` (sshd) | `<match type="pcre2">` on full_log | `syslog,sshd` |
 | Linux `service: auditd` | `<match type="pcre2">` on EXECVE full_log | `auditd` |
+
+Windows conditions are translated, not ignored: `a and b`, `not f` (emitted
+as `negate="yes"`), `all of x*`, and `1 of x*` matching one item. Rules using
+`or`, parentheses, multi-field negated filters or unmapped fields are skipped
+with a reason rather than emitted with different logic. `<mitre>` carries
+only `<id>`; Wazuh 4.14 rejects `<tactic>`/`<technique>` there.
 
 Hand-review deltas currently in `custom_rules.xml` (keep on regenerate):
 

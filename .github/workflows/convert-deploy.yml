@@ -1,0 +1,95 @@
+name: Convert Sigma to Wazuh and deploy
+
+# Runs after "Validate Sigma rules" passes for a push to main (so it never
+# races that workflow's own SPL commit): regenerates the Wazuh rules from the
+# Sigma source, merges them with the hand-tuned live file, commits any new
+# rules and dispatches the deploy.
+#
+# A push made with GITHUB_TOKEN does not trigger other workflows, so the
+# deploy is started explicitly with workflow_dispatch (the documented
+# exception) instead of relying on deploy-wazuh.yml's push trigger.
+"on":
+  workflow_run:
+    workflows: ["Validate Sigma rules"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: convert-deploy
+  cancel-in-progress: false
+
+jobs:
+  convert:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install pyyaml
+
+      - name: Convert Sigma to Wazuh XML
+        run: |
+          python3 platform/converters/sigma_to_wazuh.py \
+            --sigma-dir detections/sigma \
+            --output /tmp/fresh_rules.xml \
+            --anchor if_group \
+            --start-id 100001
+
+      - name: Three-way merge with hand-tuned fixes
+        run: |
+          python3 platform/converters/merge_wazuh_rules.py \
+            --fresh /tmp/fresh_rules.xml \
+            --live detections/wazuh/custom_rules.xml \
+            --map platform/converters/wazuh_rule_ids.json \
+            --output detections/wazuh/custom_rules.xml
+
+      - name: Validate merged XML
+        run: |
+          python3 -c "
+          import re, xml.etree.ElementTree as ET
+          text = re.sub(r'<!--.*?-->', '', open('detections/wazuh/custom_rules.xml').read(), flags=re.S)
+          ids = [r.get('id') for r in ET.fromstring(text).iter('rule')]
+          assert len(ids) == len(set(ids)), 'duplicate rule IDs!'
+          assert all(i and i.isdigit() for i in ids), 'bad rule ID!'
+          print(f'OK: {len(ids)} rules, IDs unique')
+          "
+
+      - name: Commit merged rules and dispatch the deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add detections/wazuh/custom_rules.xml platform/converters/wazuh_rule_ids.json
+          if git diff --cached --quiet; then
+            echo "No Wazuh changes to commit."
+            exit 0
+          fi
+          git commit -m "Auto-convert Sigma to Wazuh rules"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && break
+            echo "push attempt $attempt failed; retrying"; sleep 5
+          done
+          git fetch origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            echo "::error::could not push the converted rules"; exit 1
+          fi
+          gh workflow run deploy-wazuh.yml --ref main
+          echo "Dispatched deploy-wazuh.yml"
