@@ -1,0 +1,1 @@
+Image="*\\reg.exe" CommandLine="*HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run*" NOT (ParentImage IN ("*ADIDNT Tooling*", "*Microsoft\\System\\Configuration*") Image="*\\reg.exe") Image="*\\reg.exe" CommandLine="*add*" CommandLine="*/reg:64*" CommandLine IN ("*\\Temp\\*", "*\\Users\\Public\\*", "*\\AppData\\Local\\Temp\\*", "*\\Users\\Public\\*", "*.exe*")
