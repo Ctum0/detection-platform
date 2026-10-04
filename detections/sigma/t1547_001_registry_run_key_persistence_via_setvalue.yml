@@ -1,0 +1,27 @@
+title: Registry Run Key Persistence via SetValue
+id: a7b8c9d0-e1f2-4a3b-9c8d-7e9f0a1b2c3d
+status: experimental
+description: Detects unauthorized modifications to Windows Registry Run keys via SetValue operations, which are commonly used for persistence by writing executable paths that auto-execute at boot.
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection:
+    TargetObject|contains:
+      - '\Microsoft\Windows\CurrentVersion\Run'
+      - '\Microsoft\Windows\CurrentVersion\RunOnce'
+      - '\Microsoft\Windows\CurrentVersion\RunServices'
+  filter_legit:
+    Image|endswith:
+      - '\MSIEXEC.EXE'
+      - '\WMUNOTIFY.EXE'
+      - '\TMMREGISTRY.EXE'
+  condition: selection and not filter_legit
+falsepositives:
+  - Legitimate software installers and uninstallers that register their components to Run keys
+  - System services and drivers that register for startup
+  - Administrative tools and configuration utilities
+level: high
+tags:
+  - attack.persistence
+  - attack.t1547.001
