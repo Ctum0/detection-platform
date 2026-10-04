@@ -1,0 +1,28 @@
+title: Suspicious PowerShell Scheduled Task Creation
+status: stable
+description: Detects potential malicious scheduled task creation via PowerShell without using schtasks.exe
+logsource:
+  product: windows
+  service: sysmon
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: ['\\powershell.exe', '\\pwsh.exe']
+    CommandLine|contains:
+      - '-taskname'
+      - '-TaskName'
+      - 'New-ScheduledTask'
+      - 'Register-ScheduledTask'
+  not_legitimate:
+    - Image|contains: '\\schtasks.exe'
+    - ParentImage|contains: '\\Microsoft Surface\\'  # Many devices have scheduled task cleanup tools
+  condition: all of selection and not_legitimate
+fields:
+  - Image
+  - CommandLine
+  - ParentImage
+falsepositives:
+  - Legitimate PowerShell scripts creating tasks via native cmdlets
+  - Development/testing environments using custom scheduled task scripts
+  - Third-party management tools invoking PowerShell task creation APIs
+level: high
