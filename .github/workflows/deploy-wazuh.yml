@@ -4,8 +4,13 @@ name: Deploy rules to Wazuh
   push:
     branches: [main]
     paths:
-      - 'detections/wazuh/**'
+      - 'detections/wazuh/custom_rules.xml'
+      - '.github/workflows/deploy-wazuh.yml'
   workflow_dispatch:
+
+concurrency:
+  group: wazuh-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -22,8 +27,12 @@ jobs:
         run: |
           set -euo pipefail
           PASS=$(cat "$WAZUH_API_PASS_FILE")
+          echo "::add-mask::$PASS"
           TOKEN=$(curl -sk -X POST "$WAZUH_API_URL/security/user/authenticate" \
             -u "$WAZUH_API_USER:$PASS" | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['token'])")
+          echo "::add-mask::$TOKEN"
+          # Keep the previous live file so a bad deploy can be rolled back by hand.
+          docker cp single-node-wazuh.manager-1:/var/ossec/etc/rules/local_rules.xml "$RUNNER_TEMP/local_rules.prev.xml" || echo "::warning::could not back up previous local_rules.xml"
           HTTP=$(curl -sk -o /tmp/deploy_resp.json -w "%{http_code}" -X PUT \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/octet-stream" \
@@ -31,7 +40,7 @@ jobs:
             --data-binary @detections/wazuh/custom_rules.xml)
           cat /tmp/deploy_resp.json
           if [ "$HTTP" != "200" ]; then echo "::error::Deploy failed with HTTP $HTTP"; exit 1; fi
-          grep -q '"error": 0' /tmp/deploy_resp.json || { echo "::error::Wazuh reported an error"; exit 1; }
+          python3 -c "import sys,json;sys.exit(0 if json.load(open('/tmp/deploy_resp.json')).get('error')==0 else 1)" || { echo "::error::Wazuh reported an error"; exit 1; }
           echo "Deployed OK (HTTP $HTTP)"
 
       - name: Restart manager to apply rules
@@ -40,6 +49,9 @@ jobs:
           docker restart single-node-wazuh.manager-1
           sleep 15
           docker exec single-node-wazuh.manager-1 /var/ossec/bin/agent_control -l | grep -c Active
+          if docker exec single-node-wazuh.manager-1 grep -E 'wazuh-analysisd.*(ERROR|CRITICAL)' /var/ossec/logs/ossec.log | tail -n 5 | grep -q .; then
+            echo "::warning::analysisd errors in ossec.log, check rules"
+          fi
 
       - name: Verify rules loaded
         env:
@@ -55,5 +67,7 @@ jobs:
             -H "Authorization: Bearer $TOKEN" \
             "$WAZUH_API_URL/rules/files/local_rules.xml")
           if [ "$HTTP" != "200" ]; then echo "::error::Verify GET failed with HTTP $HTTP"; exit 1; fi
-          grep -q "100001" /tmp/verify_resp.json || { echo "::error::Rule 100001 not found in deployed file"; exit 1; }
-          echo "Verified OK (HTTP $HTTP, rule 100001 present)"
+          for id in $(grep -o '<rule id="[0-9]*"' detections/wazuh/custom_rules.xml | grep -o '[0-9]*'); do
+            grep -Eq "id=[^0-9]{0,3}$id[^0-9]" /tmp/verify_resp.json || { echo "::error::Rule $id not found in deployed file"; exit 1; }
+          done
+          echo "Verified OK (HTTP $HTTP, all rule IDs from custom_rules.xml present)"

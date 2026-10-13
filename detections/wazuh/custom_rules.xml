@@ -23,7 +23,7 @@
   <rule id="100003" level="12">
     <if_group>sysmon_event_10</if_group>
     <field name="win.eventdata.targetImage" type="pcre2">(?i)\\lsass\.exe$</field>
-    <field name="win.eventdata.grantedAccess" type="pcre2">(?i)^(?:0x1010|0x1410|0x1438|0x143a|0x1fffff|0x1010$|0x1410)</field>
+    <field name="win.eventdata.grantedAccess" type="pcre2">(?i)^(?:0x1010|0x1410|0x1438|0x143a|0x1fffff)$</field>
     <description>Detection Platform: Sensitive handle to LSASS - credential dumping pattern [T1003.001]</description>
     <mitre>
       <id>T1003.001</id>
