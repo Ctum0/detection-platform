@@ -81,8 +81,8 @@ found in detail.
   `../modules/detection-pipeline/docs/pipeline-demo/README.md`
   (debugging war story) and `.github/workflows/deploy-wazuh.yml`.
 - **Silent-success failure modes are worse than loud failures.** The
-  original deploy step used `curl -sk`, which swallows HTTP errors and
-  exits 0 — a workflow can show fully green while the manager is still
+  original deploy step ran `curl -s` without checking the status code, so
+  it swallowed HTTP errors and exited 0 — a workflow can show fully green while the manager is still
   running stale rules. Fixed by capturing the HTTP code explicitly and
   failing the step on anything but 200 + `error: 0`. Same principle as
   the hot-reload lesson above: a CI/CD step should fail loudly the moment

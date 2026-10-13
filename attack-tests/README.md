@@ -10,3 +10,6 @@ the [Detection Pipeline](../modules/detection-pipeline/README.md) module:
 
 Chronological narrative of the campaign that produced these lives in
 `../modules/adversary-emulation/docs/campaign-log.md`.
+
+Not every file here records a completed run: `t1547-001-registry-run-key.md`
+(DET-013) is a procedure only, pending deploy and validation.

@@ -68,6 +68,6 @@ jobs:
             "$WAZUH_API_URL/rules/files/local_rules.xml")
           if [ "$HTTP" != "200" ]; then echo "::error::Verify GET failed with HTTP $HTTP"; exit 1; fi
           for id in $(grep -o '<rule id="[0-9]*"' detections/wazuh/custom_rules.xml | grep -o '[0-9]*'); do
-            grep -Eq "id=[^0-9]{0,3}$id[^0-9]" /tmp/verify_resp.json || { echo "::error::Rule $id not found in deployed file"; exit 1; }
+            grep -Eq "(@id\"?: *\"|id=[^0-9]{0,3})$id[^0-9]" /tmp/verify_resp.json || { echo "::error::Rule $id not found in deployed file"; exit 1; }
           done
           echo "Verified OK (HTTP $HTTP, all rule IDs from custom_rules.xml present)"

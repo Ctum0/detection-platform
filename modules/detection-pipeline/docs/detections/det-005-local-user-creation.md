@@ -7,7 +7,7 @@
 | Data source | Windows Security log, Event ID 4720, via Wazuh agent |
 | ATT&CK | T1136.001 — Local Account |
 | Severity | Medium |
-| Status | VALIDATED 2026-09-27 |
+| Status | VALIDATED 2026-09-27 (stock rules observed; custom 100002 firing not evidenced) |
 
 ## Logic
 
@@ -25,7 +25,8 @@ Validated 2026-09-27: ran `net user backdoor P@ssw0rd123 /add` on
 windows-victim — command completed successfully, and
 Wazuh fired 60109 `User account enabled or created` plus EID 4722
 `A user account was enabled` (Target `backdoor`, Subject set to the operator account).
-Evidence: `evidence/det005-net-user-backdoor.png`,
+Custom rule 100002 chains under stock 60109; no indexed screenshot shows
+100002 itself firing. Evidence: `evidence/det005-net-user-backdoor.png`,
 `evidence/det005-user-created-alerts.png`,
 `evidence/det005-eid4722-drilldown.png`.
 

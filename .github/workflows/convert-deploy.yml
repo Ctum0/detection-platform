@@ -14,6 +14,13 @@ name: Convert Sigma to Wazuh and deploy
 # title adds it again under a new ID; update the map in the same commit.
 # Rules the converter cannot express faithfully are skipped with a reason.
 #
+# Checkout note: the job checks out the tip of main, not the SHA that the
+# triggering Validate run saw. The pushed commit has already been validated
+# (this job only runs after a successful push validation) and the merge step
+# must apply on top of the newest live rules file; pinning to the validated
+# SHA would make the final push non-fast-forward whenever main moved, and a
+# later push has its own Validate run that triggers its own conversion.
+#
 # Manual runs can set dry_run to convert, merge and validate without
 # committing or deploying (shows the diff that would be shipped).
 "on":
@@ -55,7 +62,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install deps
-        run: pip install pyyaml
+        run: pip install -r platform/requirements-ci.txt
 
       - name: Convert Sigma to Wazuh XML
         run: |
@@ -66,12 +73,19 @@ jobs:
             --start-id 100001
 
       - name: Three-way merge with hand-tuned fixes
+        shell: bash
         run: |
           python3 platform/converters/merge_wazuh_rules.py \
             --fresh /tmp/fresh_rules.xml \
             --live detections/wazuh/custom_rules.xml \
             --map platform/converters/wazuh_rule_ids.json \
-            --output detections/wazuh/custom_rules.xml
+            --output detections/wazuh/custom_rules.xml | tee /tmp/merge.log
+          # Drift is informational: live rules are never overwritten.
+          if grep -q '^DRIFT: live' /tmp/merge.log; then
+            n=$(grep -c '^DRIFT: live' /tmp/merge.log)
+            echo "::warning::$n live rule(s) differ from their Sigma-derived output (see the merge log)"
+            { echo "### Sigma vs live rule drift (report only)"; echo '```'; grep -A8 '^DRIFT' /tmp/merge.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Validate merged XML
         run: |
@@ -83,6 +97,9 @@ jobs:
           assert all(i and i.isdigit() for i in ids), 'bad rule ID!'
           print(f'OK: {len(ids)} rules, IDs unique')
           "
+
+      - name: Lint rules file (XML, unique IDs, regexes compile)
+        run: python3 -m pytest platform/tests/test_rules_xml.py -q
 
       - name: Show what would be shipped (dry run)
         if: inputs.dry_run

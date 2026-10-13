@@ -39,7 +39,12 @@ The merge matches rules by Sigma identity (`<file> :: <title>`, recorded with
 the deployed rule ID in `platform/converters/wazuh_rule_ids.json`), not by the
 converter's positional IDs. Hand-tuned live rules always win, live-only
 tuning rules (100013, 100020) are kept, and new Sigma rules get the next free
-ID. With nothing new, the live file is left byte-identical.
+ID. With nothing new, the live file is left byte-identical. Where a kept live
+rule differs from what its Sigma source would now produce, the merge prints
+`DRIFT:` lines (a `::warning::` in CI) and changes nothing; `--fail-on-drift`
+makes that an error. Tests for the converter and merge are in
+`platform/tests/` (`.github/workflows/tests.yml`, dependencies pinned in
+`platform/requirements-ci.txt`).
 
 ## Mapping decisions
 

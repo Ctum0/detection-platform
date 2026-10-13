@@ -10,6 +10,8 @@ Strategy:
 - Sigma rules already in the map: keep the LIVE version (hand-tuned wins).
 - Sigma rules not in the map (new detections): take the fresh rule, give it
   the next free ID above every ID in use, record it in the map.
+- Drift between a kept live rule and the Sigma-derived output is REPORTED
+  (DRIFT lines, ::warning:: in CI) but never applied.
 - Live rules with no Sigma source (hand-written tuning rules like
   100013/100020) or whose Sigma was deleted: kept as they are.
 - The live file is edited as text: new rules are inserted before the
@@ -33,9 +35,13 @@ from pathlib import Path
 
 # Wazuh reserves 100000-120000 for local rules.
 CUSTOM_ID_MIN, CUSTOM_ID_MAX = 100000, 120000
-MAPPING_LINE = re.compile(r"^\s*(\d+) <-> (.+?) :: (.+?)\s*$")
+# File names never contain " :: ", so the first one splits file from title;
+# the title (group 3) may itself contain " :: ".
+MAPPING_LINE = re.compile(r"^\s*(\d+) <-> (.+?) :: (.*?)\s*$")
 # Elements that point at other rule IDs and must follow a renumbering.
 ID_REFERENCES = ("if_sid", "if_matched_sid")
+# Elements ignored by the drift report: they do not change what matches.
+COSMETIC = ("description", "group")
 
 
 def strip_comments(text):
@@ -50,14 +56,59 @@ def parse_rules(text):
     return root, rules
 
 
+def decode_key_part(text):
+    """Inverse of sigma_to_wazuh.encode_key_part (comments cannot hold "--")."""
+    return re.sub(r"\\(\\|u002d)", lambda m: "\\" if m.group(1) == "\\" else "-", text)
+
+
 def fresh_keys(text):
     """Converter header: '  100013 <-> file.yml :: Title' -> {id: key}."""
     keys = {}
     for line in text.splitlines():
         m = MAPPING_LINE.match(line)
         if m:
-            keys[m.group(1)] = f"{m.group(2)} :: {m.group(3)}"
+            keys[m.group(1)] = f"{decode_key_part(m.group(2))} :: {decode_key_part(m.group(3))}"
     return keys
+
+
+def rule_signature(rule, renumber=None):
+    """Behaviour-relevant content of a rule, for drift comparison only.
+    Child order is irrelevant; IDs in if_sid/if_matched_sid are renumbered
+    into the live numbering first."""
+    renumber = renumber or {}
+    sig = {"level": rule.get("level"), "frequency": rule.get("frequency"),
+           "timeframe": rule.get("timeframe")}
+    items = []
+    for el in rule:
+        if el.tag in COSMETIC:
+            continue
+        text = " ".join((el.text or "").split())
+        text = re.sub(r"\\([- ])", r"\1", text)             # converter escapes - and space
+        text = re.sub(r"^(\(\?i\))\.\*|\.\*$", r"\1", text)  # redundant .* around substring patterns
+        if el.tag in ID_REFERENCES:
+            text = ",".join(sorted(renumber.get(t.strip(), t.strip()) for t in text.split(",") if t.strip()))
+        if el.tag == "mitre":
+            text = ",".join(sorted(i.text or "" for i in el.iter("id")))
+        if el.tag in ("group", "if_group"):
+            text = ",".join(sorted(t for t in text.split(",") if t))
+        attrs = ",".join(f"{k}={v}" for k, v in sorted(el.attrib.items()))
+        items.append(f"<{el.tag} {attrs}> {text}".replace(" >", ">"))
+    sig["items"] = sorted(items)
+    return sig
+
+
+def drift(live_rule, fresh_rule, renumber):
+    """Human-readable differences (empty when equivalent). Report only."""
+    a, b = rule_signature(live_rule), rule_signature(fresh_rule, renumber)
+    out = []
+    for k in ("level", "frequency", "timeframe"):
+        if a[k] != b[k]:
+            out.append(f"{k}: live={a[k]} sigma={b[k]}")
+    for item in sorted(set(a["items"]) - set(b["items"])):
+        out.append(f"live only:  {item}")
+    for item in sorted(set(b["items"]) - set(a["items"])):
+        out.append(f"sigma only: {item}")
+    return out
 
 
 def render_rule(rule):
@@ -73,16 +124,46 @@ def main():
     ap.add_argument("--live", required=True)
     ap.add_argument("--map", default="platform/converters/wazuh_rule_ids.json")
     ap.add_argument("--output", required=True)
+    ap.add_argument("--fail-on-drift", action="store_true",
+                    help="exit 2 when live rules differ from Sigma-derived output (default: report only)")
     args = ap.parse_args()
 
-    fresh_text = Path(args.fresh).read_text()
-    live_text = Path(args.live).read_text()
     map_path = Path(args.map)
     if not map_path.exists():
         sys.exit(f"ERROR: {map_path} not found; it maps each Sigma rule to its live Wazuh rule ID")
-    id_map = json.loads(map_path.read_text())
-    rule_ids = id_map["rules"]
+    try:
+        fresh_text = Path(args.fresh).read_text()
+        live_text = Path(args.live).read_text()
+        id_map = json.loads(map_path.read_text())
+        live_text, report = merge(fresh_text, live_text, id_map)
+    except (ET.ParseError, json.JSONDecodeError, KeyError, OSError) as exc:
+        sys.exit(f"ERROR: {type(exc).__name__}: {exc}")
+    except MergeError as exc:
+        sys.exit(f"ERROR: {exc}")
 
+    Path(args.output).write_text(live_text)
+    if report["added"]:
+        map_path.write_text(json.dumps(id_map, indent=2) + "\n")
+    print(f"Merged: kept {report['kept']} mapped live rules, {report['live_only']} live-only rules untouched, "
+          f"added {len(report['added'])} new: {report['added']}")
+    for note in report["skipped"]:
+        print(f"NOTE: {note}")
+    for rid, key, diffs in report["drift"]:
+        print(f"DRIFT: live rule {rid} ({key}) differs from Sigma-derived output (report only, live kept):")
+        for d in diffs:
+            print(f"    {d}")
+    if not report["drift"]:
+        print("DRIFT: none")
+    if report["drift"] and args.fail_on_drift:
+        sys.exit(2)
+
+
+class MergeError(Exception):
+    pass
+
+
+def merge(fresh_text, live_text, id_map):
+    rule_ids = id_map["rules"]
     _, fresh_rules = parse_rules(fresh_text)
     _, live_rules = parse_rules(live_text)
     keys = fresh_keys(fresh_text)
@@ -97,7 +178,7 @@ def main():
         fid = rule.get("id")
         key = keys.get(fid)
         if key is None:
-            sys.exit(f"ERROR: fresh rule {fid} has no mapping line in the converter header")
+            raise MergeError(f"fresh rule {fid} has no mapping line in the converter header")
         if key in rule_ids:
             renumber[fid] = str(rule_ids[key])
             if renumber[fid] in live_ids:
@@ -106,7 +187,7 @@ def main():
                 skipped.append(f"{key} (mapped to {renumber[fid]}, absent from live; not re-added)")
             continue
         if next_id > CUSTOM_ID_MAX:
-            sys.exit(f"ERROR: no free rule ID left in {CUSTOM_ID_MIN}-{CUSTOM_ID_MAX}")
+            raise MergeError(f"no free rule ID left in {CUSTOM_ID_MIN}-{CUSTOM_ID_MAX}")
         renumber[fid] = str(next_id)
         rule_ids[key] = next_id
         new_rules.append(rule)
@@ -125,7 +206,7 @@ def main():
             added.append(f"{rule.get('id')} ({rule.findtext('description')})")
         close = live_text.rstrip().rfind("</group>")
         if close < 0:
-            sys.exit("ERROR: live file has no closing </group>")
+            raise MergeError("live file has no closing </group>")
         live_text = live_text[:close].rstrip("\n") + "\n\n" + "\n".join(blocks) + "\n" + live_text[close:]
 
     # The merged file must still parse and keep every rule ID unique.
@@ -133,16 +214,25 @@ def main():
     ids = [r.get("id") for r in merged]
     dupes = sorted({i for i in ids if ids.count(i) > 1})
     if dupes:
-        sys.exit(f"ERROR: duplicate rule IDs after merge: {dupes}")
+        raise MergeError(f"duplicate rule IDs after merge: {dupes}")
 
-    Path(args.output).write_text(live_text)
+    # Report (never apply) differences between the live rule and what the
+    # current Sigma source would generate for it.
+    live_by_id = {r.get("id"): r for r in live_rules}
+    drifted = []
+    for rule in fresh_rules:
+        final = renumber[rule.get("id")]
+        if rule in new_rules or final not in live_by_id:
+            continue
+        diffs = drift(live_by_id[final], rule, renumber)
+        if diffs:
+            drifted.append((final, keys[rule.get("id")], diffs))
+
     if new_rules:
         id_map["rules"] = dict(sorted(rule_ids.items()))
-        map_path.write_text(json.dumps(id_map, indent=2) + "\n")
-    print(f"Merged: kept {kept} mapped live rules, {len(live_ids) - kept} live-only rules untouched, "
-          f"added {len(added)} new: {added}")
-    for s in skipped:
-        print(f"NOTE: {s}")
+    report = {"kept": kept, "live_only": len(live_ids) - kept, "added": added,
+              "skipped": skipped, "drift": sorted(drifted)}
+    return live_text, report
 
 
 if __name__ == "__main__":

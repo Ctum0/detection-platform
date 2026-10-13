@@ -118,7 +118,10 @@ MITRE = {
     "T1548.001": ("Privilege Escalation", "Setuid and Setgid"),
     "T1110.001": ("Credential Access", "Password Guessing"),
     "T1685.005": ("Defense Impairment", "Clear Windows Event Logs"),
-    "T1098": ("Execution", "T1098"),  # canary test technique; display name unresolved
+    # DET-012 notepad canary: tagged attack.t1098 + attack.persistence. The
+    # technique is only a placeholder for the pipeline test; the tactic here
+    # matches the Sigma tag (T1098 is not an Execution technique).
+    "T1098": ("Persistence", "Account Manipulation"),
     "T1070.001": ("Defense Evasion", "Clear Windows Event Logs"),  # legacy ID
 }
 
@@ -402,6 +405,11 @@ def translate_sshd(rule_el, doc):
                 needles.extend(vals)
     if not needles:
         return False
+    # if_group takes a single group name, so a multi-group anchor is invalid;
+    # anchor on the stock sshd failure rules (5710 invalid user, 5760 failed
+    # password) instead, matching the hand-tuned live rule 100008.
+    if any("failed password" in str(n).lower() for n in needles):
+        ET.SubElement(rule_el, "if_sid").text = "5710, 5760"
     m = ET.SubElement(rule_el, "match")
     m.set("type", "pcre2")
     m.text = "(?i)sshd\\[\\d+\\]: (?:{})".format(
@@ -479,7 +487,12 @@ def convert(sigma_dir, start_id, anchor):
         if path.name in SKIP_FILES:
             skipped.append((path.name, SKIP_FILES[path.name]))
             continue
-        docs = [d for d in yaml.safe_load_all(path.read_text()) if d]
+        try:
+            docs = [d for d in yaml.safe_load_all(path.read_text()) if d]
+        except yaml.YAMLError as exc:
+            sys.exit(f"ERROR: cannot parse {path}: {str(exc).strip()}")
+        if not all(isinstance(d, dict) for d in docs):
+            sys.exit(f"ERROR: {path}: every YAML document must be a mapping")
         pending_base_id = {}
         for doc in docs:
             title = doc.get("title", path.stem)
@@ -551,8 +564,16 @@ def convert(sigma_dir, start_id, anchor):
 
 
 def _comment_safe(text):
-    """XML comments may not contain "--" (it makes the file unparseable)."""
+    """Lossy: XML comments may not contain "--". Used for free-text comments."""
     return re.sub(r"-{2,}", "-", str(text))
+
+
+def encode_key_part(text):
+    """Reversible form for the mapping header: no "--" can survive, and
+    merge_wazuh_rules.decode_key_part restores the exact original string, so
+    titles containing "--" still match their wazuh_rule_ids.json key."""
+    text = re.sub(r"[\r\n]+", " ", str(text)).replace("\\", "\\\\")
+    return re.sub(r"(?<=-)-", r"\\u002d", text)
 
 
 def render(rules_out, mapping, skipped, start_id):
@@ -563,7 +584,7 @@ def render(rules_out, mapping, skipped, start_id):
     lines.append(f"  Generated (UTC): {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%d %H:%M}")
     lines.append("  Rule ID <-> Sigma rule mapping:")
     for rid, fname, title in mapping:
-        fname, title = _comment_safe(fname), _comment_safe(title)
+        fname, title = encode_key_part(fname), encode_key_part(title)
         lines.append(f"    {rid} <-> {fname} :: {title}")
     lines.append("  Skipped (no Wazuh equivalent):")
     if skipped:

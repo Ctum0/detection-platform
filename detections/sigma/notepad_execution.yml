@@ -11,7 +11,7 @@ author: Sithum
 date: 2026-09-27
 tags:
   - attack.t1098
-  - attack.execution
+  - attack.persistence
 logsource:
   category: process_creation
   product: windows

@@ -7,7 +7,7 @@
 | Data source | /var/log/auth.log (sshd) via Wazuh agent |
 | ATT&CK | T1110.001 — Password Guessing |
 | Severity | Level 10 |
-| Status | VALIDATED 2026-09-26 |
+| Status | VALIDATED 2026-09-26 (stock rule 5712 only) |
 
 ## Logic
 Multiple failed SSH authentication attempts from a single source
@@ -20,7 +20,7 @@ sshd "Failed password for ..." lines; aggregates by source IP.
 ## Validation
 - Attack: hydra -l nonexistentuser -P rockyou.txt -t 4 <victim-ip> ssh
 - Source: Parrot attacker machine
-- Result: rule 5712 fired in Wazuh Threat Hunting
+- Result: stock rule 5712 fired in Wazuh Threat Hunting. Custom rules 100008 and 100009 were not shown firing, so this validates the scenario and telemetry, not the custom rules
 - Evidence: `evidence/det001-hydra-attack.png`, `evidence/det001-rule5712-bruteforce.png` (see `shared/evidence-index.md`)
 
 ## False-positive considerations

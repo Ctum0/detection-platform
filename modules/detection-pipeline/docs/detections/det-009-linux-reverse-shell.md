@@ -11,6 +11,10 @@
 
 ## Logic
 
+Deployed rule 100001 was narrowed in 2026-10: it no longer matches a bare
+`nc|socat`; it needs nc/ncat/netcat/socat with an `-e` style flag, or
+sh/bash/dash `-i` with `/dev/tcp/` or `>&`. Not validated live (L-001).
+
 (`exe` is bash/sh/dash AND `a1` contains `-i` AND `/dev/tcp/` or `>&` in `a2`/`a3`) OR (`exe` is nc/ncat/netcat/socat AND `-e` in `a1`/`a2`). No aggregation — each match fires.
 
 ## Expected telemetry
