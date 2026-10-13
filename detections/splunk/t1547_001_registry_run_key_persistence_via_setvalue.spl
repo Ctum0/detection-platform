@@ -1,1 +1,1 @@
-TargetObject IN ("*\\Microsoft\\Windows\\CurrentVersion\\Run*", "*\\Microsoft\\Windows\\CurrentVersion\\RunOnce*", "*\\Microsoft\\Windows\\CurrentVersion\\RunServices*") NOT (Image IN ("*\\MSIEXEC.EXE", "*\\WMUNOTIFY.EXE", "*\\TMMREGISTRY.EXE"))
+TargetObject IN ("*\\Microsoft\\Windows\\CurrentVersion\\Run*", "*\\Microsoft\\Windows\\CurrentVersion\\RunOnce*", "*\\Microsoft\\Windows\\CurrentVersion\\RunServices*") NOT (Image IN ("*\\Windows\\System32\\msiexec.exe", "*\\Windows\\SysWOW64\\msiexec.exe", "*\\WMUNOTIFY.EXE", "*\\TMMREGISTRY.EXE"))
