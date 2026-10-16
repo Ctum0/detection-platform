@@ -37,6 +37,7 @@ net user backdoor /delete
 
 Ran as a manual `net user` command rather than a named ART test (no AD in
 the lab, so every 4720 is local-account creation on the Win10 victim by
-definition). Evidence: `shared/evidence/det005-net-user-backdoor.png`,
-`shared/evidence/det005-user-created-alerts.png`,
-`shared/evidence/det005-eid4722-drilldown.png`.
+definition). Alerts observed were stock rules 60109/60110 and EID 4722;
+custom rule 100002 firing is not evidenced. Planned screenshots
+(`shared/evidence/det005-*.png`) are not in the repo; see
+`shared/evidence-index.md`.

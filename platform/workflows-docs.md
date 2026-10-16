@@ -1,11 +1,19 @@
 # CI/CD workflows
 
-How the three GitHub Actions workflows in `.github/workflows/` turn a Sigma
-rule into a live Wazuh alert, and why they're built the way they are.
+How the GitHub Actions workflows in `.github/workflows/` turn a Sigma
+rule into a live Wazuh alert, and why they're built the way they are. There
+are four: three form the delivery chain below, and `tests.yml` (Platform
+tests and rule lint) is a read-only check on the converter and the rules
+file (pytest suite in `platform/tests/`, dependencies pinned in
+`platform/requirements-ci.txt`; it never touches Wazuh).
 
 ## Overview
 
-Three workflows, two different trust boundaries:
+The three delivery workflows run on two kinds of runner. CI and Convert run on GitHub-hosted
+runners with no route into the lab; only CD runs inside it. Convert is the
+hand-off between the two: it holds `contents: write` and `actions: write`
+so it can commit to `main` and dispatch CD.
+
 
 - **CI — `validate.yml`** (`Validate Sigma rules`): GitHub-hosted runner,
   no access to the lab. Its only job is to keep `detections/sigma/`
@@ -31,7 +39,8 @@ workflow file itself.
 
 1. **Checkout** with `persist-credentials: true` — needed later so the
    autocommit step can push back as `GITHUB_TOKEN`.
-2. **Install `sigma-cli`** plus the Splunk pySigma backend.
+2. **Install `sigma-cli`** (pinned to 3.1.0) plus the Splunk pySigma
+   backend (pinned to 2.1.0).
 3. **`sigma check detections/sigma/`** — schema, syntax, and ATT&CK-tag
    validation. Zero errors required before anything downstream is
    trusted.
@@ -46,12 +55,16 @@ workflow file itself.
    file, that's correctly the event-count correlation, the actually
    deployable detection.
 5. **Commit generated SPL** — `git add -A detections/splunk/`, commit
-   with `[skip ci]`, push. Guarded by `if: github.event_name !=
+   with `[skip ci]`, and push after a `git pull --rebase` with up to three
+   attempts; the job fails if the commit still cannot be pushed. Guarded by `if: github.event_name !=
    'pull_request'`: a fork's PR can't push back credentials it doesn't
    have, and `[skip ci]` guarantees this autocommit never re-triggers
    itself into a loop.
 
 ## Convert — Sigma to Wazuh
+
+(The checkout stays on `main`; the reason is in the workflow's header
+comment.)
 
 Trigger: `workflow_run` on **Validate Sigma rules** completing successfully
 for a push to `main` (pull-request runs are ignored), or manual dispatch.
@@ -71,6 +84,11 @@ to push.
    live rules win; live-only tuning rules (100013, 100020) are kept; new
    rules get the next free ID. With nothing new the file is left
    byte-identical, so "No Wazuh changes" is a reliable signal.
+   The merge also prints `DRIFT:` lines (and a `::warning::` annotation in
+   CI) where a kept live rule differs from what the Sigma source would now
+   produce. Drift is only reported, never applied; `--fail-on-drift` turns
+   it into a non-zero exit. Titles containing `--` or ` :: ` are handled,
+   and malformed YAML exits with a clean error message.
 3. **Validate** — the merged file must parse and every rule ID must be
    unique.
 4. **Commit and dispatch** — new rules are committed to `main` (with a
@@ -86,7 +104,10 @@ Temporal correlations (DET-010) have no Wazuh equivalent and stay manual.
 
 ## CD — Deploy rules to Wazuh
 
-Trigger: push to `main` touching `detections/wazuh/**`.
+Trigger: push to `main` touching `detections/wazuh/custom_rules.xml` or the
+workflow file itself, or manual dispatch. A `concurrency` group
+(`wazuh-deploy`, no cancel) serialises deploys. Other files under
+`detections/wazuh/` (this directory's markdown) do not trigger it.
 
 Runs on `self-hosted` rather than a GitHub-hosted runner because the
 Wazuh manager's API is only reachable at `https://localhost:55000` from
@@ -98,17 +119,22 @@ manage a VPN just for CI.
    with a password read from a file on the runner host
    (`WAZUH_API_PASS_FILE`, never a repo secret), then `PUT
    /rules/files/local_rules.xml?overwrite=true` with
-   `detections/wazuh/custom_rules.xml` as the body. The step explicitly
-   captures the HTTP status code and greps the response body for
-   `"error": 0` before calling it a success — see "the hot-reload lesson"
-   below for why a bare `curl -sk` isn't good enough here.
+   `detections/wazuh/custom_rules.xml` as the body. Before the PUT it
+   copies the current live `local_rules.xml` out of the container into the
+   runner's temp directory (a warning, not a failure, if that copy fails);
+   rollback is by hand. The step captures the HTTP status code and checks
+   the response body for `error` equal to 0 before calling it a success —
+   see "The hot-reload lesson" below.
 2. **Restart the manager** — `docker restart single-node-wazuh.manager-1`,
    then confirm agents reconnect (`agent_control -l | grep -c Active`).
    This step exists because of a real bug, not caution for its own sake:
-   see below.
-3. **Verify rules loaded** — a fresh `GET /rules/files/local_rules.xml`
-   confirms rule `100001` is present in what the manager now reports as
-   loaded, not just what was uploaded.
+   see below. It also warns if `ossec.log` shows analysisd errors.
+3. **Verify rules** — a fresh `GET /rules/files/local_rules.xml` must
+   return HTTP 200, and every rule ID found in
+   `detections/wazuh/custom_rules.xml` must appear in the returned file.
+   This checks what the manager's API reports for the file on disk after
+   the restart. It does not prove that `analysisd` loaded each rule; only
+   a firing alert (or `wazuh-logtest`) does that.
 
 ### The hot-reload lesson
 
@@ -126,13 +152,15 @@ in-memory rule set. The restart step above was added specifically to
 close that gap; it's the reason step 2 exists at all. Distilled version
 in `../shared/lessons-learned.md` (Pipeline/CD).
 
-The original deploy step also used to run bare `curl -sk`, which swallows
-HTTP errors and exits 0 — the workflow could show fully green while the
-manager silently kept running stale rules. Fixed by capturing the status
-code and response body explicitly and failing loudly on anything but
-200 + `error: 0`. Same principle as the hot-reload issue: a CI/CD step
-should prove the thing it claims happened, not just that its own command
-didn't crash.
+The original deploy step also swallowed HTTP errors: `curl -s` without
+`--fail` exits 0 on a 4xx/5xx, so the workflow could show fully green while
+the manager silently kept running stale rules. Fixed by capturing the
+status code and response body explicitly and failing on anything but
+200 with `error` equal to 0. The `-k` in the current commands is a separate
+matter: it disables TLS certificate verification (the manager uses a
+self-signed certificate on localhost) and is still in place. Same principle
+as the hot-reload issue: a CI/CD step should prove the thing it claims
+happened, not just that its own command didn't crash.
 
 ## Runner architecture
 
@@ -149,16 +177,17 @@ another store.
 
 ## Deploy safety constraints
 
-`detections/wazuh/custom_rules.xml` must stay free of XML comments — the
-Wazuh 4.14 API's rule-upload parser crashes (500 / PicklingError) on
+`detections/wazuh/custom_rules.xml` was kept free of XML comments because
+the Wazuh 4.14 API's rule-upload parser crashes (500 / PicklingError) on
 comment blocks containing HTML-escaped entities like `&gt;` or `&amp;`.
-Because of that, the rule-ID-to-Sigma-file mapping that would normally
-live in a header comment instead lives in
-`../detections/wazuh/DEPLOY-NOTES.md`, and the *generator's* output
-(before hand-tuning) puts that mapping in a comment only when producing
-a throwaway/reviewed file, never the deployed one directly. See
-`converters/README.md` for the converter's hand-review deltas that
-`custom_rules.xml` carries beyond what the generator produces on its own.
+Because of that, the rule-ID-to-Sigma-file mapping lives in
+`../detections/wazuh/DEPLOY-NOTES.md` and in
+`converters/wazuh_rule_ids.json`, not in the deployed file. The
+generator does write a mapping comment at the top of its own output, but
+that output is only an intermediate (`/tmp/fresh_rules.xml`); the merge
+step copies rules out of it and does not carry that header over. See
+`converters/README.md` for the hand-review deltas that `custom_rules.xml`
+carries beyond what the generator produces on its own.
 
 ## Debugging war stories
 
@@ -166,7 +195,7 @@ Beyond the hot-reload lesson above, four other issues surfaced while
 building this pipeline (full narrative in
 `../modules/detection-pipeline/docs/pipeline-demo/README.md`):
 
-1. **Silent `curl -sk` failures** — covered above.
+1. **Silent HTTP failures in the deploy step** — covered above.
 2. **Duplicate rule IDs** — a `local_rules.xml.bak-*` file left inside
    the manager's rules directory was loaded by `analysisd` alongside the
    live file, double-defining every custom rule; "only first occurrence

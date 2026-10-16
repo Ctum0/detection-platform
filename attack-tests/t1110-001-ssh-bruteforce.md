@@ -35,5 +35,6 @@ existed.
 
 Earliest validated technique in the lab (2026-09-26), predates the
 Atomic Red Team install — run as a raw `hydra` command, not an ART test.
-Evidence: `shared/evidence/det001-hydra-attack.png`,
-`shared/evidence/det001-rule5712-bruteforce.png`.
+The alert was stock rule 5712; custom 100008/100009 were not shown
+firing. Planned screenshots (`shared/evidence/det001-*.png`) are not in
+the repo; see `shared/evidence-index.md`.

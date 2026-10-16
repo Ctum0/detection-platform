@@ -1,7 +1,14 @@
 title: Registry Run Key Persistence via SetValue
-id: a7b8c9d0-e1f2-4a3b-9c8d-7e9f0a1b2c3d
+id: b0b1d84c-8207-4f6a-b643-c57bf8c8de7c
 status: experimental
 description: Detects unauthorized modifications to Windows Registry Run keys via SetValue operations, which are commonly used for persistence by writing executable paths that auto-execute at boot.
+references:
+  - https://attack.mitre.org/techniques/T1547/001/
+author: Sithum
+date: 2026-10-04
+tags:
+  - attack.persistence
+  - attack.t1547.001
 logsource:
   product: windows
   category: registry_set
@@ -13,15 +20,14 @@ detection:
       - '\Microsoft\Windows\CurrentVersion\RunServices'
   filter_legit:
     Image|endswith:
-      - '\MSIEXEC.EXE'
+      - '\Windows\System32\msiexec.exe'
+      - '\Windows\SysWOW64\msiexec.exe'
       - '\WMUNOTIFY.EXE'
       - '\TMMREGISTRY.EXE'
   condition: selection and not filter_legit
 falsepositives:
+  - 'Exclusion rationale: msiexec.exe is only excluded from its two system directories. A bare endswith on msiexec.exe would let any binary renamed or copied to msiexec.exe (for example in %TEMP%) write Run keys unseen, so an msiexec.exe outside those directories still alerts. WMUNOTIFY.EXE and TMMREGISTRY.EXE remain name-only exclusions pending review of the lab telemetry.'
   - Legitimate software installers and uninstallers that register their components to Run keys
   - System services and drivers that register for startup
   - Administrative tools and configuration utilities
 level: high
-tags:
-  - attack.persistence
-  - attack.t1547.001

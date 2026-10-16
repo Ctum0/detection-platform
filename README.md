@@ -51,21 +51,25 @@ Full platform architecture (network, hosts, remote access) is in
 
 | Module | Focus | Status |
 |---|---|---|
-| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 13 rules (1 AI-proposed), 9 validated | ✅ Complete |
-| [Adversary Emulation](modules/adversary-emulation/README.md) | ART campaign, purple-team loop; AD domain phase (planned) | 🔨 Workstream 1 complete · AD phase planned |
-| [Cloud & Identity Security](modules/cloud-identity/README.md) | Entra ID / AWS monitoring, IaC scanning | 🗓 Planned |
-| [SOAR & Automated Response](modules/soar/README.md) | Wazuh alerts → n8n pipeline → enrichment → AI triage → Telegram, human-in-the-loop | ✅ Complete |
-| [Threat Intelligence](modules/threat-intel/README.md) | Honeypots (Cowrie/T-Pot), MISP/OpenCTI, IOC feedback into Detection Pipeline | ⬜ Not started |
+| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 13 detections (1 AI-proposed), 9 validated | Complete (DET-013 pending deploy) |
+| [Adversary Emulation](modules/adversary-emulation/README.md) | ART campaign, purple-team loop; AD domain phase (planned) | Workstream 1 complete; AD phase planned |
+| [Cloud & Identity Security](modules/cloud-identity/README.md) | Entra ID / AWS monitoring, IaC scanning | Planned |
+| [SOAR & Automated Response](modules/soar/README.md) | Wazuh alerts → n8n pipeline → enrichment → AI triage → Telegram, human-in-the-loop | Complete |
+| [Threat Intelligence](modules/threat-intel/README.md) | Honeypots (Cowrie/T-Pot), MISP/OpenCTI, IOC feedback into Detection Pipeline | Not started |
 
-The Detection Pipeline module's 9/13 is the actual current count — see
-Metrics below for exactly which four are not yet validated and why.
+The Detection Pipeline module's 9/13 is the current count of detections
+with a recorded attack run and alert. See Metrics below for the four that
+are not, and why. "Validated" means the alert was observed; for DET-001
+and DET-005 that alert came from a stock Wazuh rule (see
+`shared/evidence-index.md`).
 
 ## Platform architecture
 
 ```text
                     modules/
-   (Detection Pipeline complete, Adversary Emulation Workstream 1
-              complete, the other three not started)
+   (Detection Pipeline and SOAR complete, Adversary Emulation
+    Workstream 1 complete, Cloud & Identity and Threat Intel
+                      not started)
                          |
          each module's own docs/ (matrix, campaign
          logs, per-detection writeups — genuinely
@@ -98,11 +102,14 @@ or its own evidence index, it just plugs into what's already here.
 1. Write the rule in `detections/sigma/<name>.yml` (Sigma spec v2.1; run
    `sigma check` locally before pushing).
 2. Push — CI validates and auto-generates the Splunk SPL.
-3. Run `platform/converters/sigma_to_wazuh.py` to regenerate
-   `custom_rules.xml`, hand-review the diff against the live Wazuh
-   ruleset (see `platform/converters/README.md` for mapping decisions and
-   caveats), then push — CD deploys and restarts the manager. Full
-   CI/CD mechanics: `platform/workflows-docs.md`.
+3. Merge to `main`. After CI passes, `convert-deploy.yml` converts new
+   Sigma rules, merges them into `detections/wazuh/custom_rules.xml`
+   without touching existing rules, commits the result and dispatches
+   `deploy-wazuh.yml`, which uploads the file and restarts the manager.
+   To preview the merge without committing, run `convert-deploy.yml`
+   manually with `dry_run` set. Mapping decisions and caveats:
+   `platform/converters/README.md`. Full CI/CD mechanics:
+   `platform/workflows-docs.md`.
 4. Add a per-detection doc in
    `modules/detection-pipeline/docs/detections/det-NNN-<slug>.md`
    (template: header table, Logic, Expected telemetry, Validation method,
@@ -125,23 +132,30 @@ way Detection Pipeline and Adversary Emulation already do.
 - **Detections:** 13 (DET-001…DET-013) across 11 ATT&CK techniques — see
   `modules/detection-pipeline/docs/attack-matrix.md`
 - **Validated:** 9/13 (DET-001, DET-002, DET-003, DET-004, DET-005,
-  DET-006, DET-007, DET-011, DET-012)
+  DET-006, DET-007, DET-011, DET-012). Caveats: DET-001 was proven by
+  stock rule 5712 only, DET-005 by stock rules 60109/60110 and EID 4722,
+  and the DET-004 custom-rule firing screenshot is not captured
 - **Untested:** DET-008/DET-009 — blocked by an auditd ingestion gap (see
   `modules/detection-pipeline/docs/known-limitations.md`); DET-010 —
   manual deployment only (temporal correlation, no Wazuh equivalent)
 - **Pending:** DET-013 — first AI-proposed rule (T1547.001), merged
-  2026-10-04 after human review; awaiting its Wazuh deploy and ART run
+  2026-10-04 after human review; its Wazuh rule is not yet in
+  `custom_rules.xml`, so it still needs the deploy and an ART run
 - **Sigma rules:** 13 files (spec v2.1, `sigma check` clean)
-- **Wazuh rules:** 14 custom rules — 12 converted from Sigma (IDs
-  100001–100012) and 2 hand-written tuning rules (100013, 100020). New
-  Sigma rules are converted and deployed by `convert-deploy.yml`
+- **Wazuh rules:** 14 custom rules in `custom_rules.xml` — 12 converted
+  from Sigma (IDs 100001–100012, from 11 Sigma files; DET-013 is not
+  among them yet) and 2 hand-written level-0 suppression rules (100013,
+  100020). New Sigma rules are converted and deployed by
+  `convert-deploy.yml`
 - **Splunk SPL:** 12 auto-generated searches (DET-010 excluded)
 - **AI detection loop:** Detection Gap Analyst (n8n) drafts a Sigma rule
   and PR → Operator Console (human gate, merges only on green CI) →
-  convert-deploy → Wazuh
-- **SOAR pipeline:** 9 n8n nodes, Wazuh alert to Telegram in roughly 2–3
-  minutes (most of it the AI step), with cross-execution deduplication via
-  the Remove Duplicates node. Module doc: `modules/soar/README.md`.
+  convert-deploy → Wazuh. Components and what is and is not documented:
+  `modules/detection-pipeline/docs/ai-detection-loop.md`
+- **SOAR pipeline:** 9 n8n nodes, Wazuh alert to Telegram, with
+  cross-execution deduplication in the Remove Duplicates node (key:
+  rule ID plus minute). The AI step dominates latency; end-to-end time
+  has not been measured. Module doc: `modules/soar/README.md`.
 - **Evidence:** indexed in `shared/evidence-index.md`, files in
   `shared/evidence/`
 
@@ -156,7 +170,8 @@ detection-platform/
 ├── modules/
 │   ├── detection-pipeline/
 │   │   └── docs/                ← attack-matrix, per-detection writeups,
-│   │                               pipeline-demo, known-limitations
+│   │                               pipeline-demo, known-limitations,
+│   │                               ai-detection-loop
 │   ├── adversary-emulation/
 │   │   └── docs/                ← campaign-log.md
 │   ├── cloud-identity/          ← README only (not started)
@@ -169,6 +184,7 @@ detection-platform/
 ├── shared/
 │   ├── architecture.md          ← platform-wide network/hosts/data flow
 │   ├── vm-inventory.md          ← VM & asset inventory
+│   ├── project-report.md        ← end-to-end status report and known gaps
 │   ├── evidence/                ← screenshot evidence (every module)
 │   ├── evidence-index.md        ← screenshot index
 │   └── lessons-learned.md       ← distilled lessons across modules

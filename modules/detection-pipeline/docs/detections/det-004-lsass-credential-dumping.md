@@ -7,7 +7,7 @@
 | Data source | Sysmon Event ID 10 (process_access) via Wazuh agent |
 | ATT&CK | T1003.001 — LSASS Memory |
 | Severity | Critical |
-| Status | VALIDATED 2026-09-27 |
+| Status | VALIDATED 2026-09-27 (per campaign log; rule firing screenshot not captured) |
 
 ## Logic
 
@@ -36,9 +36,9 @@ LSASS handle across two distinct access events for this technique).
 Confirmed the firing process was the planned ART test, not unexpected
 activity.
 
-**Not yet captured:** a screenshot of rule 100003 firing. The earlier
-stock-92900 FP-case screenshot is on file. Planned captures are listed in
-`shared/evidence-index.md`.
+**Not captured:** a screenshot of rule 100003 firing. The earlier
+stock-92900 FP-case screenshot is also not in the repo. Planned captures
+are listed in `shared/evidence-index.md`.
 
 ## FP notes
 

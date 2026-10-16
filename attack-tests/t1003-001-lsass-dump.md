@@ -52,7 +52,8 @@ or `rundll32` invocation.
 ## Evidence
 
 **Not yet captured:** a screenshot of rule 100003 firing. The earlier
-stock-92900 FP-case screenshot is on file (`shared/evidence/det004-lsass-92900-svchost.png`).
+stock-92900 FP-case screenshot (`shared/evidence/det004-lsass-92900-svchost.png`)
+is also not in the repo.
 The planned captures are listed in `shared/evidence-index.md`.
 
 ## Notes

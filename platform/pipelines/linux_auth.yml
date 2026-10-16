@@ -1,7 +1,5 @@
+# Pass-through placeholder: auth.log is consumed as-is, so no field renames.
+# "transformations" is required by pySigma; an empty list is valid and a no-op.
 name: linux_auth
 priority: 20
-logsource:
-product: linux
-service: auth
-detection:
-# no field transformations needed — pass through
+transformations: []

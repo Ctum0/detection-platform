@@ -19,10 +19,10 @@ evidence for each step.
         v
  GitHub Actions CD (.github/workflows/deploy-wazuh.yml)
         |  - runs on self-hosted runner (VPS)
-        |  - converts + uploads custom_rules.xml via Wazuh API
+        |  - uploads custom_rules.xml via Wazuh API
         |  - restarts the manager (single-node docker does not hot-reload
         |    rule files on PUT alone — see shared/lessons-learned.md)
-        |  - verifies rules are live (HTTP 200 + error:0 check)
+        |  - verifies HTTP 200 + error 0, then that the rule IDs are reported back
         v
  Wazuh Manager (rules live)
         |
@@ -32,6 +32,10 @@ evidence for each step.
         v
  Threat Hunting / investigation / documentation
 ```
+
+Note: this diagram is the loop as it was when the demo was run. The
+`convert-deploy.yml` step between CI and CD was added later; at demo time
+rule 100012 was written into `custom_rules.xml` by hand.
 
 ## Live test walkthrough (DET-012, rule 100012)
 
@@ -53,9 +57,9 @@ Total elapsed time from `git push` to alert: under 2 minutes.
 The first deploy "succeeded" but deployed nothing — a lesson in CI
 false-positives:
 
-1. **Silent failure:** the deploy step used `curl -sk`, which swallows HTTP
-   errors and exits 0. The workflow showed green while the manager still
-   ran old rules. Fixed by capturing the HTTP code and failing loudly on
+1. **Silent failure:** the deploy step used `curl -s` without checking the
+   status, which swallows HTTP errors and exits 0. The workflow showed
+   green while the manager still ran old rules. Fixed by capturing the HTTP code and failing loudly on
    anything but 200 + `"error": 0`.
 2. **Wazuh API bug:** XML comments containing HTML-escaped entities
    (`&gt;`, `&amp;`) crash the 4.14 API's rule-upload parser with a
@@ -86,7 +90,7 @@ detection-engineering skill as writing the rules.
 ## Custom rules validated live (as of this demo)
 
 Single source of truth for validation status is `docs/attack-matrix.md`
-(currently 9/12 validated). Custom rules proven firing by their own alerts:
+(currently 9/13 validated). Custom rules proven firing by their own alerts:
 
 | Rule | Detection | Technique | Proven by |
 |---|---|---|---|

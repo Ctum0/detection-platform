@@ -133,7 +133,7 @@ pipeline" — see `shared/lessons-learned.md`.
 7 techniques covered in this writeup (T1110.001, T1136.001, T1003.001,
 T1059.001, T1053.005, T1685.005, T1543.003), 4 flipped from UNTESTED to
 VALIDATED this session (DET-003, DET-004, DET-007, DET-011), bringing the
-Detection Pipeline matrix to 9/12. DET-008/DET-009 (Linux/auditd) remain
+Detection Pipeline matrix to 9/12 at the time (12 detections then; DET-013 was added later, making it 9/13). DET-008/DET-009 (Linux/auditd) remain
 untested, blocked upstream by the auditd ingestion gap — not an ART or
 campaign issue, see
 `../../detection-pipeline/docs/known-limitations.md` L-001.

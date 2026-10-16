@@ -1,0 +1,44 @@
+name: Platform tests and rule lint
+
+# Converter/merge unit tests plus a lint of the live Wazuh rules file (XML
+# validity, unique IDs, every pcre2 pattern compiles). Read-only: it never
+# touches Wazuh, commits, or deploys.
+"on":
+  push:
+    paths:
+      - 'platform/**'
+      - 'detections/**'
+      - '.github/workflows/tests.yml'
+  pull_request:
+    paths:
+      - 'platform/**'
+      - 'detections/**'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned deps
+        run: |
+          pip install -r platform/requirements-ci.txt
+          # pySigma is only needed for the linux_auth.yml pipeline check.
+          pip install pysigma==1.5.1
+
+      - name: Rule lint (XML, unique IDs, regexes compile)
+        run: python -m pytest platform/tests/test_rules_xml.py -q
+
+      - name: Converter, merge and content tests
+        run: python -m pytest platform/tests -q

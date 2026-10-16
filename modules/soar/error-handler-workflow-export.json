@@ -1,0 +1,85 @@
+{
+  "name": "Error Handler (Telegram)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "err-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Never forward the error payload verbatim: keep it short and free of item data.\nconst e = $json.execution || {}, w = $json.workflow || {};\nconst msg = String((e.error && e.error.message) || 'unknown error').replace(/\\s+/g, ' ').slice(0, 300);\nconst esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst text = [\n  '<b>n8n workflow error</b>',\n  'Workflow: ' + esc(w.name),\n  'Node: ' + esc(e.lastNodeExecuted),\n  'Error: ' + esc(msg),\n  e.url ? 'Execution: ' + esc(e.url) : '',\n].filter(Boolean).join('\\n').slice(0, 3900);\nreturn [{ json: { chat_id: '<TELEGRAM_CHAT_ID>', text } }];"
+      },
+      "id": "err-format",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "err-telegram",
+      "name": "Telegram Error Notify",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Telegram Error Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
