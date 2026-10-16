@@ -1,6 +1,6 @@
 # Detection Pipeline
 
-**Status: COMPLETE** (DET-013 pending deploy) — ART campaign complete for
+**Status: COMPLETE** (DET-013 deployed, validation pending) — ART campaign complete for
 Windows; 9/13 detections have a recorded attack run and alert, Sigma → CI →
 convert → CD → Wazuh pipeline proven live. Validation caveats are listed
 under Validated rules below.
@@ -102,7 +102,7 @@ step necessary, are in `../../platform/workflows-docs.md`.
 | DET-010 | T1110.001 Password Guessing (temporal) | — (manual only) | UNTESTED — out of scope |
 | DET-011 | T1685.005 Clear Windows Event Logs | 100007 | VALIDATED |
 | DET-012 | T1098 (CI/CD canary) | 100012 | VALIDATED |
-| DET-013 | T1547.001 Registry Run Keys | not yet in `custom_rules.xml` (expected 100021) | PENDING — merged, not deployed, not validated |
+| DET-013 | T1547.001 Registry Run Keys | 100021 | DEPLOYED 2026-10-16 — ART run not yet recorded |
 
 Full detail per row: `docs/attack-matrix.md`. Per-detection writeups
 (logic, expected telemetry, FP notes, validation evidence):
@@ -118,10 +118,10 @@ Full detail per row: `docs/attack-matrix.md`. Per-detection writeups
   `docs/known-limitations.md` L-001), DET-010 (manual-deployment only,
   temporal correlation has no Wazuh equivalent)
 - **Pending:** DET-013 (T1547.001, first AI-proposed rule) — merged
-  2026-10-04; no Wazuh rule yet, so it needs the deploy and an ART run
+  2026-10-04, deployed as rule 100021 on 2026-10-16; it still needs an ART run
 - **Sigma rules:** 13 files, spec v2.1, `sigma check` clean
-- **Wazuh rules:** 14 custom rules in `custom_rules.xml` — 12 converted
-  from Sigma (IDs 100001-100012) plus hand-written level-0 suppression rules
+- **Wazuh rules:** 15 custom rules in `custom_rules.xml` — 13 converted
+  from Sigma (IDs 100001-100012 and 100021) plus hand-written level-0 suppression rules
   100013 and 100020; new Sigma rules are converted and deployed by
   `convert-deploy.yml`
 - **Splunk SPL:** 12 auto-generated searches (DET-010 excluded)

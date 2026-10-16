@@ -138,7 +138,7 @@ captured" earlier in this file also still need doing.
 | `evidence/det002-encoded-attack.png` | DET-002 | `powershell -enc …` run (SIEM side is present, rule 100005 firing) |
 | `evidence/det003-cradle-attack.png` | DET-003 | DownloadString+IEX cradle run on windows-victim (SIEM side is present, rule 100004 firing) |
 | `evidence/det004-comsvcs-attack.png` / `evidence/det004-rule100003-alert.png` | DET-004 | ART T1003.001 `rundll32 comsvcs.dll, MiniDump` run + custom rule 100003 firing. Neither view is captured, and the stock-92900 shot is also missing |
-| `evidence/det013-*` | DET-013 | Attack run (ART T1547.001) and the alert for the DET-013 rule, once it is deployed. See `attack-tests/t1547-001-registry-run-key.md` |
+| `evidence/det013-*` | DET-013 | Attack run (ART T1547.001) and the alert for rule 100021 (DET-013), once the run is recorded. See `attack-tests/t1547-001-registry-run-key.md` |
 | `evidence/det006-schtasks-attack.png` | DET-006 | `schtasks /create /tn LabTest …` run on windows-victim |
 | `evidence/det007-sc-create-attack.png` | DET-007 | ART T1543.003 run with overridden `binary_path` on windows-victim (SIEM side is present, rule 100011 firing) |
 | `evidence/det008-chmod-suid-attack.png` / `evidence/det008-auditd-execve.png` | DET-008 | `chmod u+s /tmp/lab_suid` + auditd EXECVE record — blocked on L-001 (auditd dead on linux-victim, needs reboot) |

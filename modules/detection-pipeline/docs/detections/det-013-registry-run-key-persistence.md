@@ -3,11 +3,11 @@
 | Field | Value |
 |---|---|
 | Detection ID | DET-013 |
-| Rule | Sigma `detections/sigma/t1547_001_registry_run_key_persistence_via_setvalue.yml`; Wazuh rule not yet in `custom_rules.xml` (expected 100021 on the next convert-deploy run); SPL `detections/splunk/t1547_001_registry_run_key_persistence_via_setvalue.spl` |
+| Rule | Sigma `detections/sigma/t1547_001_registry_run_key_persistence_via_setvalue.yml`; Wazuh rule 100021 (deployed 2026-10-16 by convert-deploy); SPL `detections/splunk/t1547_001_registry_run_key_persistence_via_setvalue.spl` |
 | Data source | Sysmon EID 13 (RegistryEvent, value set) via Wazuh agent |
 | ATT&CK | T1547.001 — Registry Run Keys / Startup Folder |
 | Severity | High (Sigma level `high`; converts to Wazuh level 10) |
-| Status | PENDING — Sigma merged 2026-10-04 (PR #7); not deployed, not validated |
+| Status | PENDING — Sigma merged 2026-10-04 (PR #7); rule 100021 deployed 2026-10-16; ART run not yet recorded |
 
 ## Origin
 
@@ -35,10 +35,9 @@ registry value sets for Run keys; if it does not, no rule can fire.
 
 ## Validation method
 
-Not run yet. Planned: deploy, then run the Atomic Red Team T1547.001 Run key
+Not run yet. The rule is deployed (100021). Planned: run the Atomic Red Team T1547.001 Run key
 test on `windows-victim` (see `attack-tests/t1547-001-registry-run-key.md`),
-confirm EID 13 reaches the manager and the new rule fires, record the real
-rule ID in `detections/wazuh/DEPLOY-NOTES.md`, then record the validation in
+confirm EID 13 reaches the manager and rule 100021 fires, then record the validation in
 the Operator Console and flip the status here and in `attack-matrix.md`.
 
 ## FP notes

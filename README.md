@@ -51,7 +51,7 @@ Full platform architecture (network, hosts, remote access) is in
 
 | Module | Focus | Status |
 |---|---|---|
-| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 13 detections (1 AI-proposed), 9 validated | Complete (DET-013 pending deploy) |
+| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 13 detections (1 AI-proposed), 9 validated | Complete (DET-013 deployed, validation pending) |
 | [Adversary Emulation](modules/adversary-emulation/README.md) | ART campaign, purple-team loop; AD domain phase (planned) | Workstream 1 complete; AD phase planned |
 | [Cloud & Identity Security](modules/cloud-identity/README.md) | Entra ID / AWS monitoring, IaC scanning | Planned |
 | [SOAR & Automated Response](modules/soar/README.md) | Wazuh alerts → n8n pipeline → enrichment → AI triage → Telegram, human-in-the-loop | Complete |
@@ -139,13 +139,12 @@ way Detection Pipeline and Adversary Emulation already do.
   `modules/detection-pipeline/docs/known-limitations.md`); DET-010 —
   manual deployment only (temporal correlation, no Wazuh equivalent)
 - **Pending:** DET-013 — first AI-proposed rule (T1547.001), merged
-  2026-10-04 after human review; its Wazuh rule is not yet in
-  `custom_rules.xml`, so it still needs the deploy and an ART run
+  2026-10-04 after human review and deployed as Wazuh rule 100021
+  (2026-10-16); it still needs an ART run to record the alert
 - **Sigma rules:** 13 files (spec v2.1, `sigma check` clean)
-- **Wazuh rules:** 14 custom rules in `custom_rules.xml` — 12 converted
-  from Sigma (IDs 100001–100012, from 11 Sigma files; DET-013 is not
-  among them yet) and 2 hand-written level-0 suppression rules (100013,
-  100020). New Sigma rules are converted and deployed by
+- **Wazuh rules:** 15 custom rules in `custom_rules.xml` — 13 converted
+  from Sigma (IDs 100001–100012 and 100021, from 12 Sigma files) and 2
+  hand-written level-0 suppression rules (100013, 100020). New Sigma rules are converted and deployed by
   `convert-deploy.yml`
 - **Splunk SPL:** 12 auto-generated searches (DET-010 excluded)
 - **AI detection loop:** Detection Gap Analyst (n8n) drafts a Sigma rule
