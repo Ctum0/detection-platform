@@ -136,4 +136,15 @@
     <field name="win.eventdata.targetFilename" type="pcre2">(?i)__PSScriptPolicyTest_[a-z0-9]+\.[a-z0-9]+\.ps1</field>
     <description>Detection Platform tuning: PowerShell script policy test file - benign, excluded from 92213</description>
   </rule>
+
+  <rule id="100021" level="10">
+    <if_group>sysmon_event_13</if_group>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i).*(?:\\Microsoft\\Windows\\CurrentVersion\\Run|\\Microsoft\\Windows\\CurrentVersion\\RunOnce|\\Microsoft\\Windows\\CurrentVersion\\RunServices).*</field>
+    <field name="win.eventdata.image" type="pcre2" negate="yes">(?i)(?:\\Windows\\System32\\msiexec\.exe|\\Windows\\SysWOW64\\msiexec\.exe|\\WMUNOTIFY\.EXE|\\TMMREGISTRY\.EXE)$</field>
+    <description>Registry Run Key Persistence via SetValue [T1547.001]</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+  </rule>
+
 </group>

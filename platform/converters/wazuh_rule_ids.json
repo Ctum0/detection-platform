@@ -12,6 +12,7 @@
     "ssh_bruteforce.yml :: SSH Brute Force - Multiple Failed Authentications": 100009,
     "ssh_bruteforce.yml :: SSH Failed Authentication": 100008,
     "suid_privilege_escalation.yml :: Linux SUID Binary Privilege Escalation Attempt": 100010,
-    "suspicious_service_creation.yml :: Windows Service Creation by Suspicious Path": 100011
+    "suspicious_service_creation.yml :: Windows Service Creation by Suspicious Path": 100011,
+    "t1547_001_registry_run_key_persistence_via_setvalue.yml :: Registry Run Key Persistence via SetValue": 100021
   }
 }
