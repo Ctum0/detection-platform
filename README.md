@@ -184,6 +184,7 @@ detection-platform/
 ├── shared/
 │   ├── architecture.md          ← platform-wide network/hosts/data flow
 │   ├── vm-inventory.md          ← VM & asset inventory
+│   ├── project-report.md        ← end-to-end status report and known gaps
 │   ├── evidence/                ← screenshot evidence (every module)
 │   ├── evidence-index.md        ← screenshot index
 │   └── lessons-learned.md       ← distilled lessons across modules

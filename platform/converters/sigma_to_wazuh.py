@@ -330,8 +330,11 @@ def translate_windows(rule_el, doc, anchor):
             rule_el, "if_sid" if anchor == "if_sid" else "if_group"
         )
         anchor_el.text = parent["sid"] if anchor == "if_sid" else parent["group"]
-        grp = ET.SubElement(rule_el, "group")
-        grp.text = f"{parent['group']},"
+        if anchor == "if_sid":
+            # With if_group the rule must not also join the group it is a
+            # child of; the deployed rules carry no <group> for that reason.
+            grp = ET.SubElement(rule_el, "group")
+            grp.text = f"{parent['group']},"
     elif service in ("security", "system"):
         channel = "Security" if service == "security" else "System"
         add_field(rule_el, "win.system.channel", f"^{channel}$", use_regex=False)

@@ -41,6 +41,7 @@ def test_convert_basic_windows_rule(tmp_path):
     rule = rules[0][0]
     assert rule.get("level") == "10"
     assert rule.find("if_group").text == "sysmon_event1"
+    assert rule.find("group") is None
     assert mapping == [(100001, "a.yml", "Test Notepad")]
 
 
