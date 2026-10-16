@@ -12,4 +12,4 @@ Chronological narrative of the campaign that produced these lives in
 `../modules/adversary-emulation/docs/campaign-log.md`.
 
 Not every file here records a completed run: `t1547-001-registry-run-key.md`
-(DET-013) is a procedure only, pending deploy and validation.
+(DET-013) is a procedure only; the rule is deployed (100021), the run is pending.

@@ -37,14 +37,14 @@ repository and are marked "owner to describe" in
 ## 3. Detection inventory
 
 - 13 Sigma detections across 11 ATT&CK techniques.
-- 14 custom Wazuh rules: 100001-100012 converted from Sigma, 100013 and
-  100020 hand-written level-0 suppressions.
+- 15 custom Wazuh rules: 100001-100012 and 100021 converted from Sigma,
+  100013 and 100020 hand-written level-0 suppressions.
 - 9 detections have a recorded attack run and alert. DET-001 and DET-005
   were proven by stock Wazuh rules, not the custom ones. DET-008 and
   DET-009 are blocked by an auditd ingestion gap. DET-010 is a temporal
   correlation with no Wazuh equivalent. DET-013 (T1547.001) was the first
-  AI-proposed rule; it is merged in Sigma and becomes rule 100021 on the
-  next convert-deploy run.
+  AI-proposed rule; it is deployed as rule 100021 (2026-10-16) and still
+  needs an attack run.
 
 ## 4. What the audit changed
 

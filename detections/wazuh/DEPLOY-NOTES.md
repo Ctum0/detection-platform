@@ -25,7 +25,7 @@ Rule ID <-> Sigma rule mapping:
   100012 <-> notepad_execution.yml (Sysmon EID1, CI/CD canary, level 5) — VALIDATED firing
   100013 <-> lsass 92900 FP suppression (level 0, LSM path) — see ../../modules/detection-pipeline/docs/tuning/fp-suppressions.md
   100020 <-> 92213 FP suppression (level 0, PowerShell policy test files) — see ../../modules/detection-pipeline/docs/tuning/fp-suppressions.md
-  (pending) <-> t1547_001_registry_run_key_persistence_via_setvalue.yml (Sysmon EID 13, DET-013) — NOT DEPLOYED, NOT VALIDATED. No rule exists in custom_rules.xml yet; convert-deploy assigns the next free ID (expected 100021) on its next run. Record the real ID here after deploy, then validate with ART T1547.001.
+  100021 <-> t1547_001_registry_run_key_persistence_via_setvalue.yml (Sysmon EID 13, DET-013) — DEPLOYED 2026-10-16 by convert-deploy; NOT YET VALIDATED. Validate with ART T1547.001.
 Skipped: ssh_success_after_failures.yml (temporal_ordered unsupported)
 
 100007 parent fix (2026-09-27): originally anchored on
