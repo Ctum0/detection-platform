@@ -116,7 +116,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Runs ONCE - pulls both sources itself (no multi-branch input bug)\nconst base = $('Parse Alert').first().json;\nlet abuse = null;\ntry { abuse = $('AbuseIPDB Enrichment').first().json?.data ?? null; } catch(e) {}\n\nconst llmBody = {\n  model: \"Hermes Agent\",\n  messages: [\n    { role: \"system\", content: \"You are a senior SOC analyst. Write a concise triage in PLAIN TEXT only (no markdown, no asterisks, no backticks) with these sections: WHAT HAPPENED, TECHNIQUE, SEVERITY, NEXT STEPS, FP LIKELIHOOD. Max 200 words. Be direct.\" },\n    { role: \"user\", content: \"ALERT: \" + (base.rule_desc || 'unknown') + \" | RULE: \" + base.rule_id + \" | LEVEL: \" + base.level + \" | AGENT: \" + base.agent_name + \" | MITRE: \" + (base.mitre || 'none') + \" | SRC IP: \" + (base.src_ip || 'none') + \" | HASH: \" + (base.file_hash || 'none') + \" | ENRICHMENT: \" + (abuse ? JSON.stringify(abuse).slice(0,400) : 'none') }\n  ]\n};\n\nreturn [{ json: { ...base, enrichment: abuse, llm_body: JSON.stringify(llmBody) } }];"
+        "jsCode": "// Runs ONCE - pulls both sources itself (no multi-branch input bug)\nconst base = $('Parse Alert').first().json;\nlet abuse = null;\ntry { abuse = $('AbuseIPDB Enrichment').first().json?.data ?? null; } catch(e) {}\n\nconst llmBody = {\n  model: \"qwen/qwen3.8-27b\",\n  messages: [\n    { role: \"system\", content: \"You are a senior SOC analyst. Write a concise triage in PLAIN TEXT only (no markdown, no asterisks, no backticks) with these sections: WHAT HAPPENED, TECHNIQUE, SEVERITY, NEXT STEPS, FP LIKELIHOOD. Max 200 words. Be direct.\" },\n    { role: \"user\", content: \"ALERT: \" + (base.rule_desc || 'unknown') + \" | RULE: \" + base.rule_id + \" | LEVEL: \" + base.level + \" | AGENT: \" + base.agent_name + \" | MITRE: \" + (base.mitre || 'none') + \" | SRC IP: \" + (base.src_ip || 'none') + \" | HASH: \" + (base.file_hash || 'none') + \" | ENRICHMENT: \" + (abuse ? JSON.stringify(abuse).slice(0,400) : 'none') }\n  ]\n};\n\nreturn [{ json: { ...base, enrichment: abuse, llm_body: JSON.stringify(llmBody) } }];"
       },
       "id": "merge-1",
       "name": "Merge",
@@ -130,13 +130,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://<litellm-host>:4000/v1/chat/completions",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "REDACTED"
+              "value": "Bearer REPLACE_WITH_GROQ_API_KEY"
             },
             {
               "name": "Content-Type",
@@ -162,7 +162,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ai = $input.first().json;\nconst base = $('Parse Alert').first().json;\n\n// Extract LLM content\nlet summary = '';\ntry { summary = ai.choices[0].message.content || ''; } catch(e) {}\nif (!summary) summary = 'Summary unavailable';\n\n// --- Markdown -> plain text (strip ** __ ` # and stray artifacts) ---\nsummary = summary\n  .replace(/\\*\\*?/g, '')          // bold/italic asterisks\n  .replace(/__/g, '')              // underscores emphasis\n  .replace(/`{1,3}/g, '')          // code ticks\n  .replace(/^#+\\s*/gm, '')         // markdown headers\n  .replace(/^\\s*[-*]\\s+/gm, '  • ')  // bullets -> dots\n  .replace(/\\n{3,}/g, '\\n\\n')     // collapse blank lines\n  .trim();\n\n// Truncate overly long summaries (Telegram 4096 char limit, keep room for header)\nif (summary.length > 2800) summary = summary.slice(0, 2800) + '\\n… (truncated)';\n\n// --- Clean header fields ---\nconst desc = (base.rule_desc || 'Unknown alert').replace(/^[^:]{0,30}:\\s*/, '').trim();\n\nlet mitre = 'none';\ntry {\n  const m = JSON.parse(base.mitre || '{}');\n  const ids = m.id || [];\n  const tactics = m.tactic || [];\n  if (ids.length) mitre = ids.map((t,i)=> t + (tactics[i] ? ' ('+tactics[i]+')' : '')).join(', ');\n} catch(e) {}\n\nconst esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n\nconst msg = [\n  '<b>🚨 SOC ALERT</b>',\n  '<i>' + esc(desc) + '</i>',\n  '',\n  '<b>Rule:</b> ' + esc(base.rule_id) + '   <b>Level:</b> ' + esc(base.level),\n  '<b>Host:</b> ' + esc(base.agent_name),\n  '<b>MITRE:</b> ' + esc(mitre),\n  '<b>Time:</b> ' + esc(base.timestamp),\n  '',\n  '<b>🤖 AI Triage</b>',\n  esc(summary)\n].join('\\n');\n\nreturn [{ json: { chat_id: 'REDACTED', text: msg } }];"
+        "jsCode": "const ai = $input.first().json;\nconst base = $('Parse Alert').first().json;\n\n// Extract LLM content\nlet summary = '';\ntry { summary = ai.choices[0].message.content || ''; } catch(e) {}\nif (!summary) summary = 'Summary unavailable';\n\n// --- Markdown -> plain text (strip ** __ ` # and stray artifacts) ---\nsummary = summary\n  .replace(/\\*\\*?/g, '')          // bold/italic asterisks\n  .replace(/__/g, '')              // underscores emphasis\n  .replace(/`{1,3}/g, '')          // code ticks\n  .replace(/^#+\\s*/gm, '')         // markdown headers\n  .replace(/^\\s*[-*]\\s+/gm, '  \u2022 ')  // bullets -> dots\n  .replace(/\\n{3,}/g, '\\n\\n')     // collapse blank lines\n  .trim();\n\n// Truncate overly long summaries (Telegram 4096 char limit, keep room for header)\nif (summary.length > 2800) summary = summary.slice(0, 2800) + '\\n\u2026 (truncated)';\n\n// --- Clean header fields ---\nconst desc = (base.rule_desc || 'Unknown alert').replace(/^[^:]{0,30}:\\s*/, '').trim();\n\nlet mitre = 'none';\ntry {\n  const m = JSON.parse(base.mitre || '{}');\n  const ids = m.id || [];\n  const tactics = m.tactic || [];\n  if (ids.length) mitre = ids.map((t,i)=> t + (tactics[i] ? ' ('+tactics[i]+')' : '')).join(', ');\n} catch(e) {}\n\nconst esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n\nconst msg = [\n  '<b>\ud83d\udea8 SOC ALERT</b>',\n  '<i>' + esc(desc) + '</i>',\n  '',\n  '<b>Rule:</b> ' + esc(base.rule_id) + '   <b>Level:</b> ' + esc(base.level),\n  '<b>Host:</b> ' + esc(base.agent_name),\n  '<b>MITRE:</b> ' + esc(mitre),\n  '<b>Time:</b> ' + esc(base.timestamp),\n  '',\n  '<b>\ud83e\udd16 AI Triage</b>',\n  esc(summary)\n].join('\\n');\n\nreturn [{ json: { chat_id: 'REDACTED', text: msg } }];"
       },
       "id": "format-1",
       "name": "Format Message",
