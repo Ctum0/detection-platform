@@ -1,1 +1,0 @@
-type="EXECVE" exe IN ("*/chmod", "*/bin/chmod", "*/usr/bin/chmod") a1 IN ("*u+s*", "*4755*", "*4750*", "*4777*") OR a2 IN ("*u+s*", "*4755*", "*4750*", "*4777*")

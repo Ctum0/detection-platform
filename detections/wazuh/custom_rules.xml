@@ -1,15 +1,5 @@
 <group name="detection_platform_sigma,">
 
-  
-  <rule id="100001" level="10">
-    <if_sid>80700</if_sid>
-    <match type="pcre2">(?i)a0="(?:[^"]*/)?(?:nc|ncat|netcat|socat)"(?:\s+a\d+="[^"]*")*?\s+a[1-3]="-[a-z]*e"|a0="(?:[^"]*/)?(?:ba|da)?sh"\s+a1="-i"(?:\s+a\d+="[^"]*")*?\s+a\d+="[^"]*(?:/dev/tcp/|\x3e\x26)</match>
-    <description>Netcat-family or interactive shell reverse-shell execution on Linux [T1059.004]</description>
-    <mitre>
-      <id>T1059.004</id>
-    </mitre>
-  </rule>
-
   <rule id="100002" level="7">
     <if_sid>60109</if_sid>
     <description>Detection Platform: Local user account created (4720) [T1136.001]</description>
@@ -92,18 +82,6 @@
     </mitre>
   </rule>
 
-  
-  <rule id="100010" level="7">
-    <if_sid>80700</if_sid>
-    <field name="audit.command" type="pcre2">(?i)chmod</field>
-    <field name="audit.args" type="pcre2">(?i)u\+s|4755|4750|4777</field>
-    <description>Detection Platform: chmod setting SUID bit [T1548.001]</description>
-    <mitre>
-      <id>T1548.001</id>
-    </mitre>
-  </rule>
-
-  
   <rule id="100011" level="10">
     <if_group>windows_system</if_group>
     <field name="win.system.eventID">^7045$</field>

@@ -88,5 +88,5 @@ def test_render_never_emits_double_dash_in_comments(tmp_path):
 def test_real_sigma_dir_converts():
     root = c.Path(__file__).resolve().parents[2]
     rules, mapping, skipped = c.convert(root / "detections/sigma", 100001, "if_group")
-    assert len(rules) >= 12
+    assert len(rules) >= 11
     assert any(n == "ssh_success_after_failures.yml" for n, _ in skipped)

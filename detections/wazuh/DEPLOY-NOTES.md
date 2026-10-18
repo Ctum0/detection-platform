@@ -8,10 +8,9 @@ hot-reload rule files on PUT alone (see `../../shared/lessons-learned.md`).
 IMPORTANT: keep this file free of XML comments - the Wazuh 4.14 API
 rejects comment blocks containing HTML-escaped entities (&gt; &amp;)
 with an internal error. Mapping info lives here instead. The rationale for
-the 100001 and 100008 logic is in the notes below, not in the XML.
+the 100008 logic is in the notes below, not in the XML.
 
 Rule ID <-> Sigma rule mapping:
-  100001 <-> linux_reverse_shell.yml (reverse shell, auditd) — narrowed: nc/ncat/netcat/socat with an -e style flag, or sh/bash/dash -i with /dev/tcp/ or >&; NOT validated live (L-001)
   100002 <-> local_user_creation.yml (4720)
   100003 <-> lsass_credential_dumping.yml (Sysmon EID10) — VALIDATED firing
   100004 <-> powershell_download_cradle.yml (Sysmon EID1) — VALIDATED firing
@@ -20,7 +19,6 @@ Rule ID <-> Sigma rule mapping:
   100007 <-> security_log_cleared.yml (1102, parent 63103) — VALIDATED firing
   100008 <-> ssh_bruteforce.yml base rule — anchor now if_sid 5710,5760 (was if_group syslog,sshd,); 100009 depends on it; unverified live
   100009 <-> ssh_bruteforce.yml correlation (freq 6/600s)
-  100010 <-> suid_privilege_escalation.yml (auditd)
   100011 <-> suspicious_service_creation.yml (7045) — VALIDATED firing
   100012 <-> notepad_execution.yml (Sysmon EID1, CI/CD canary, level 5) — VALIDATED firing
   100013 <-> lsass 92900 FP suppression (level 0, LSM path) — see ../../modules/detection-pipeline/docs/tuning/fp-suppressions.md

@@ -1,1 +1,0 @@
-(exe IN ("*/bash", "*/sh", "*/dash") a1="*-i*" a2 IN ("*/dev/tcp/*", "*>&*") OR a3 IN ("*/dev/tcp/*", "*>&*")) OR (exe IN ("*/nc", "*/ncat", "*/netcat", "*/socat") a1="*-e*" OR a2="*-e*")

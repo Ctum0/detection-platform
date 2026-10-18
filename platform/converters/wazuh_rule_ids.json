@@ -1,7 +1,6 @@
 {
   "_comment": "Sigma rule (converter key '<file> :: <title>') -> deployed Wazuh rule ID. Maintained by platform/converters/merge_wazuh_rules.py; new Sigma rules get the next free ID. IDs not listed here (e.g. 100013, 100020) are hand-written tuning rules.",
   "rules": {
-    "linux_reverse_shell.yml :: Linux Reverse Shell Execution": 100001,
     "local_user_creation.yml :: New Local User Creation": 100002,
     "lsass_credential_dumping.yml :: Windows Credential Dumping via LSASS Access": 100003,
     "notepad_execution.yml :: Notepad Execution": 100012,
@@ -11,7 +10,6 @@
     "security_log_cleared.yml :: Clearing Windows Security Event Log": 100007,
     "ssh_bruteforce.yml :: SSH Brute Force - Multiple Failed Authentications": 100009,
     "ssh_bruteforce.yml :: SSH Failed Authentication": 100008,
-    "suid_privilege_escalation.yml :: Linux SUID Binary Privilege Escalation Attempt": 100010,
     "suspicious_service_creation.yml :: Windows Service Creation by Suspicious Path": 100011,
     "t1547_001_registry_run_key_persistence_via_setvalue.yml :: Registry Run Key Persistence via SetValue": 100021
   }

