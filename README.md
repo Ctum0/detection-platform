@@ -1,5 +1,10 @@
 # Detection Platform
 
+[![Rule Tests](https://github.com/Ctum0/detection-platform/actions/workflows/rule-tests.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/rule-tests.yml)
+[![Validate & SPL](https://github.com/Ctum0/detection-platform/actions/workflows/validate.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/validate.yml)
+[![Convert & Deploy](https://github.com/Ctum0/detection-platform/actions/workflows/convert-deploy.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/convert-deploy.yml)
+[![Unit Tests](https://github.com/Ctum0/detection-platform/actions/workflows/tests.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/tests.yml)
+
 An end-to-end detection engineering and security operations platform
 that I built and operate solo: attacks executed in a controlled lab,
 telemetry flowing into Wazuh, detections managed as code
@@ -8,6 +13,9 @@ analyst-augmented SOAR closing the loop back to human decision.
 Sigma is the single source of truth; CI converts it to Wazuh XML (deployed)
 and Splunk SPL (generated, not deployed — a portability demonstration).
 Only Wazuh is deployed. SPL is produced to prove the detection library is backend-portable.
+
+Control plane: [**Operator Console**](https://github.com/Ctum0/operator-console) (FastAPI app for human and AI rule submission, PR review queue, CD deployment tracking, and validation dispatch). Live runbook and video recording walkthrough: [`docs/DEMO.md`](docs/DEMO.md).
+
 Organized as a monorepo: one folder per module, with the detection
 library, attack-test library, and pipeline tooling shared across all of
 them at the platform level.
@@ -170,6 +178,8 @@ Telemetry, ART) are in `shared/lessons-learned.md`.
 ```text
 detection-platform/
 ├── README.md
+├── docs/
+│   └── DEMO.md                  ← live demo runbook (3 steps) and 2-3m video script
 ├── modules/
 │   ├── detection-pipeline/
 │   │   └── docs/                ← attack-matrix, per-detection writeups,
@@ -196,8 +206,10 @@ detection-platform/
 │   ├── reference/               ← correlation-syntax reference (1 rule)
 │   ├── wazuh/                   ← custom_rules.xml, DEPLOY-NOTES.md
 │   └── splunk/                  ← CI-generated *.spl (portability demonstration)
-├── attack-tests/                ← one writeup per validated technique
-└── .github/workflows/           ← CI: validate + SPL autogen; convert Sigma→Wazuh; CD: Wazuh deploy
+├── tests/
+│   └── rule-tests/              ← Tier 1 deterministic logtest harness + samples
+├── attack-tests/                ← Tier 3 attack runner index.json + technique writeups
+└── .github/workflows/           ← CI: validate, rule-tests (Tier 1); convert; CD: Wazuh deploy; attack-test (Tier 3)
 ```
 
 ## Author
