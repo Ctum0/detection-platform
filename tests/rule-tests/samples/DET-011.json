@@ -1,0 +1,19 @@
+{
+  "detection_id": "DET-011",
+  "technique": "T1685.005",
+  "name": "Clearing Windows Security Event Log",
+  "expect_rule": "100007",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Eventlog",
+        "channel": "Security",
+        "severityValue": "INFORMATION",
+        "eventID": 1102
+      },
+      "eventdata": {
+        "subjectUserName": "operator"
+      }
+    }
+  }
+}

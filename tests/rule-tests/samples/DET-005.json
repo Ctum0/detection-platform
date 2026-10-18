@@ -1,0 +1,19 @@
+{
+  "detection_id": "DET-005",
+  "technique": "T1136.001",
+  "name": "New Local User Creation",
+  "expect_rule": "100002",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Security-Auditing",
+        "channel": "Security",
+        "severityValue": "AUDIT_SUCCESS",
+        "eventID": 4720
+      },
+      "eventdata": {
+        "targetUserName": "lab_test_user"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "detection_id": "DET-007",
+  "technique": "T1543.003",
+  "name": "Windows Service Creation by Suspicious Path",
+  "expect_rule": "100011",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Service Control Manager",
+        "channel": "System",
+        "severityValue": "INFORMATION",
+        "eventID": 7045
+      },
+      "eventdata": {
+        "imagePath": "C:\\Temp\\evil.exe",
+        "serviceName": "EvilService"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "detection_id": "DET-006",
+  "technique": "T1053.005",
+  "name": "Scheduled Task Creation",
+  "expect_rule": "100006",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Security-Auditing",
+        "channel": "Security",
+        "severityValue": "AUDIT_SUCCESS",
+        "eventID": 4698
+      },
+      "eventdata": {
+        "taskName": "\\LabTest",
+        "taskContent": "<Task><Actions><Exec><Command>calc.exe</Command></Exec></Actions></Task>"
+      }
+    }
+  }
+}

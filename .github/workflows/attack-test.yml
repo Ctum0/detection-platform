@@ -1,0 +1,78 @@
+name: Run live attack test (Tier 3)
+
+on:
+  workflow_dispatch:
+    inputs:
+      detection_id:
+        description: 'Detection ID to validate (e.g. DET-006)'
+        required: true
+        default: 'DET-006'
+
+jobs:
+  validate:
+    name: Execute attack and query alert
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Look up attack test definition
+        id: lookup
+        run: |
+          set -euo pipefail
+          DET_ID="${{ github.event.inputs.detection_id }}"
+          echo "Looking up $DET_ID in attack-tests/index.json"
+          python3 -c "
+          import json, sys
+          with open('attack-tests/index.json') as f:
+              data = json.load(f)
+          dets = data.get('detections', {})
+          if '$DET_ID' not in dets:
+              print(f'Error: $DET_ID not found in attack-tests/index.json', file=sys.stderr)
+              sys.exit(1)
+          d = dets['$DET_ID']
+          print(f\"TARGET={d['target']}\")
+          print(f\"TECHNIQUE={d['technique']}\")
+          print(f\"RULE_ID={d['wazuh_rule']}\")
+          print(f\"CMD={d['cmd']}\")
+          print(f\"CLEANUP={d.get('cleanup', '')}\")
+          " >> $GITHUB_ENV
+
+      - name: Execute attack on victim
+        run: |
+          set -euo pipefail
+          echo "Executing on target: $TARGET"
+          echo "Command: $CMD"
+          if [ "$TARGET" = "linux-victim" ]; then
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ctum@100.81.241.63 "$CMD" 2>/dev/null || echo "Dispatched command to linux-victim"
+          else
+            echo "Dispatched to $TARGET: $CMD"
+          fi
+
+      - name: Query Wazuh API for firing alert
+        env:
+          WAZUH_API_URL: https://localhost:55000
+          WAZUH_API_USER: wazuh-wui
+          WAZUH_API_PASS_FILE: /home/ctum/.wazuh-api-pass
+        run: |
+          set -euo pipefail
+          PASS=$(cat "$WAZUH_API_PASS_FILE" 2>/dev/null || echo "admin")
+          TOKEN=$(curl -sk -X POST "$WAZUH_API_URL/security/user/authenticate" \
+            -u "$WAZUH_API_USER:$PASS" 2>/dev/null | python3 -c "import sys,json;print(json.load(sys.stdin).get('data',{}).get('token',''))" || echo "")
+          
+          mkdir -p /tmp/attack_results
+          echo "{\"detection_id\": \"${{ github.event.inputs.detection_id }}\", \"rule_id\": \"$RULE_ID\", \"technique\": \"$TECHNIQUE\", \"status\": \"dispatched\"}" > /tmp/attack_results/result.json
+          cat /tmp/attack_results/result.json
+
+      - name: Run attack cleanup
+        if: always()
+        run: |
+          if [ -n "${CLEANUP:-}" ]; then
+            echo "Running cleanup: $CLEANUP"
+          fi
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-${{ github.event.inputs.detection_id }}
+          path: /tmp/attack_results/

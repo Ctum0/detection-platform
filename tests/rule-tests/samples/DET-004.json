@@ -1,0 +1,21 @@
+{
+  "detection_id": "DET-004",
+  "technique": "T1003.001",
+  "name": "Windows Credential Dumping via LSASS Access",
+  "expect_rule": "100003",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 10
+      },
+      "eventdata": {
+        "targetImage": "C:\\Windows\\System32\\lsass.exe",
+        "grantedAccess": "0x1fffff",
+        "sourceImage": "C:\\Temp\\mimikatz.exe"
+      }
+    }
+  }
+}

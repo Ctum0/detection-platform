@@ -1,0 +1,21 @@
+{
+  "detection_id": "DET-013",
+  "technique": "T1547.001",
+  "name": "Registry Run Key Persistence via SetValue",
+  "expect_rule": "100021",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 13
+      },
+      "eventdata": {
+        "targetObject": "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\Backdoor",
+        "image": "C:\\Windows\\System32\\cmd.exe",
+        "details": "C:\\Temp\\beacon.exe"
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "detection_id": "DET-001",
+  "technique": "T1110.001",
+  "name": "SSH Brute Force",
+  "expect_rule": "100008",
+  "event": "Jan 15 14:32:10 linux-victim sshd[12345]: Failed password for invalid user admin from 192.168.1.100 port 45678 ssh2"
+}

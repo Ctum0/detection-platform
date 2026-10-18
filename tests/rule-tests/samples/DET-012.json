@@ -1,0 +1,19 @@
+{
+  "detection_id": "DET-012",
+  "technique": "T1098",
+  "name": "Notepad Execution (Pipeline Canary)",
+  "expect_rule": "100012",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 1
+      },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\notepad.exe"
+      }
+    }
+  }
+}

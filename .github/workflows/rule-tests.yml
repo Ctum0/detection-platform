@@ -1,0 +1,54 @@
+name: Rule unit tests (wazuh-logtest)
+
+on:
+  pull_request:
+    paths:
+      - 'detections/**'
+      - 'tests/rule-tests/**'
+      - '.github/workflows/rule-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'detections/**'
+      - 'tests/rule-tests/**'
+  workflow_dispatch:
+
+jobs:
+  logtest:
+    name: Deterministic Logtest (Tier 1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Wazuh manager container
+        run: |
+          docker run -d --name wazuh-test --platform linux/amd64 \
+            -e INDEXER_URL=https://localhost:9200 wazuh/wazuh-manager:4.14.8
+          echo "Waiting for manager startup..."
+          for i in $(seq 1 60); do
+            if docker exec wazuh-test /var/ossec/bin/wazuh-control status 2>&1 | grep -q "analysisd is running"; then
+              echo "Manager analysisd ready after ${i} checks"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Load custom rules & patch JSON channel decoder
+        run: |
+          docker cp detections/wazuh/custom_rules.xml wazuh-test:/var/ossec/etc/rules/local_rules.xml
+          # Patch win-base rules so JSON Sysmon/Security events match base rule 60000 in wazuh-logtest
+          docker exec wazuh-test sed -i 's/<category>ossec<\/category>//; s/<decoded_as>windows_eventchannel<\/decoded_as>/<decoded_as>json<\/decoded_as>/' /var/ossec/ruleset/rules/0575-win-base_rules.xml
+          docker exec wazuh-test /var/ossec/bin/wazuh-control restart
+          echo "Waiting for manager restart..."
+          for i in $(seq 1 30); do
+            if docker exec wazuh-test /var/ossec/bin/wazuh-control status 2>&1 | grep -q "analysisd is running"; then
+              echo "Manager restarted and analysisd ready"
+              break
+            fi
+            sleep 2
+          done
+          sleep 5
+
+      - name: Run rule tests
+        run: |
+          python3 tests/rule-tests/run_logtest.py --container wazuh-test
