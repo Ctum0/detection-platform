@@ -1,9 +1,19 @@
 # Detection Platform
 
+<div align="center">
+
+[![Live Demo](https://img.shields.io/badge/Live%20Control%20Plane-console.ctum.org-6366f1?style=for-the-badge&logo=safari&logoColor=white)](https://console.ctum.org/?demo=1)
+
 [![Rule Tests](https://github.com/Ctum0/detection-platform/actions/workflows/rule-tests.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/rule-tests.yml)
 [![Validate & SPL](https://github.com/Ctum0/detection-platform/actions/workflows/validate.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/validate.yml)
 [![Convert & Deploy](https://github.com/Ctum0/detection-platform/actions/workflows/convert-deploy.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/convert-deploy.yml)
 [![Unit Tests](https://github.com/Ctum0/detection-platform/actions/workflows/tests.yml/badge.svg)](https://github.com/Ctum0/detection-platform/actions/workflows/tests.yml)
+
+</div>
+
+<p align="center">
+  <img src="docs/images/console-overview.png" alt="Operator Console Overview Dashboard" width="900" style="border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+</p>
 
 An end-to-end detection engineering and security operations platform
 that I built and operate solo: attacks executed in a controlled lab,
@@ -14,7 +24,11 @@ Sigma is the single source of truth; CI converts it to Wazuh XML (deployed)
 and Splunk SPL (generated, not deployed — a portability demonstration).
 Only Wazuh is deployed. SPL is produced to prove the detection library is backend-portable.
 
-Control plane: [**Operator Console**](https://github.com/Ctum0/operator-console) (FastAPI app for human and AI rule submission, PR review queue, CD deployment tracking, and validation dispatch). Live runbook and video recording walkthrough: [`docs/DEMO.md`](docs/DEMO.md).
+Control plane: [**Operator Console (Live Interactive Demo)**](https://console.ctum.org/?demo=1) (FastAPI application for human and AI rule authoring, multi-backend transpilation, PR review queue, CD deployment tracking, and validation dispatch). Repository: [`Ctum0/operator-console`](https://github.com/Ctum0/operator-console). Live runbook and video recording walkthrough: [`docs/DEMO.md`](docs/DEMO.md).
+
+<p align="center">
+  <img src="docs/images/detection-studio.png" alt="Detection Studio IDE and Multi-Backend Transpiler" width="900" style="border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+</p>
 
 Organized as a monorepo: one folder per module, with the detection
 library, attack-test library, and pipeline tooling shared across all of
