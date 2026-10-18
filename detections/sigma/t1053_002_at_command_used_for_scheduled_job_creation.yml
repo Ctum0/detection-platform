@@ -1,0 +1,27 @@
+title: At Command Used for Scheduled Job Creation
+id: 3ea39011-ef6b-477d-bc49-972018892a8d
+status: experimental
+description: Detects the use of the At command-line utility to create a scheduled job, a technique used for persistence.
+references:
+  - https://attack.mitre.org/techniques/T1053/002/
+author: Detection Gap Analyst
+date: 2026-10-18
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_at:
+    Image|endswith: '\at.exe'
+    CommandLine|contains: '/create'
+  filter_benign:
+    CommandLine|contains:
+      - 'system32\'
+      - 'windows\system32\'
+      - 'program files\'
+  condition: selection_at and not filter_benign
+falsepositives:
+  - Administrative maintenance scripts that use the at command to install updates or patch systems
+level: medium
+tags:
+  - attack.persistence
+  - attack.t1053.002

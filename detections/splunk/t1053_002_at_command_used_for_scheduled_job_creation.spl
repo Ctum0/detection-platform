@@ -1,0 +1,1 @@
+Image="*\\at.exe" CommandLine="*/create*" NOT (CommandLine IN ("*system32\\*", "*windows\\system32\\*", "*program files\\*"))
