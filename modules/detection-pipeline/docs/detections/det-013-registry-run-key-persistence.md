@@ -7,7 +7,7 @@
 | Data source | Sysmon EID 13 (RegistryEvent, value set) via Wazuh agent |
 | ATT&CK | T1547.001 — Registry Run Keys / Startup Folder |
 | Severity | High (Sigma level `high`; converts to Wazuh level 10) |
-| Status | PENDING — Sigma merged 2026-10-04 (PR #7); rule 100021 deployed 2026-10-16; ART run not yet recorded |
+| Status | VALIDATED 2026-10-16 — Rule 100021 fired on Sysmon EID 13 (`shared/evidence/det013-rule100021-alert.png`) |
 
 ## Origin
 
@@ -35,10 +35,10 @@ registry value sets for Run keys; if it does not, no rule can fire.
 
 ## Validation method
 
-Not run yet. The rule is deployed (100021). Planned: run the Atomic Red Team T1547.001 Run key
-test on `windows-victim` (see `attack-tests/t1547-001-registry-run-key.md`),
-confirm EID 13 reaches the manager and rule 100021 fires, then record the validation in
-the Operator Console and flip the status here and in `attack-matrix.md`.
+Validated on 2026-10-16. Rule 100021 deployed on Wazuh Manager. Sysmon EID 13
+event (SetValue on `HKLM\Software\Microsoft\Windows\CurrentVersion\Run\AtomicTest`
+by `powershell.exe`) processed by Wazuh engine; rule 100021 fired with Level 10
+(T1547.001). See evidence screenshot in `shared/evidence/det013-rule100021-alert.png`.
 
 ## FP notes
 

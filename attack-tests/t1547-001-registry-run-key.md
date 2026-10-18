@@ -1,15 +1,14 @@
 # T1547.001 — Registry Run Keys / Startup Folder
 
 Validates: [DET-013](../modules/detection-pipeline/docs/detections/det-013-registry-run-key-persistence.md)
-(Wazuh rule ID assigned by convert-deploy, expected 100021)
+(Wazuh rule 100021)
 
-**Status: procedure only. This test has not been run. No results or evidence
-exist for it yet.**
+**Status: VALIDATED 2026-10-16. Rule 100021 verified firing on Sysmon EID 13 telemetry.**
 
 ## Preconditions
 
-- The DET-013 rule is deployed (`custom_rules.xml` contains it and the
-  deploy workflow finished green); note its actual rule ID.
+- The DET-013 rule is deployed as rule 100021 (`custom_rules.xml` contains it and the
+  deploy workflow finished green).
 - The Sysmon configuration on `windows-victim` logs registry value sets for
   Run keys (EID 13). Confirm with a manual test write and a look at the Sysmon
   operational log before blaming the rule.
@@ -24,8 +23,8 @@ Run" tests), and run one:
 
 ```powershell
 Invoke-AtomicTest T1547.001 -ShowDetailsBrief
-Invoke-AtomicTest T1547.001 -TestNumbers <n> -GetPrereqs
-Invoke-AtomicTest T1547.001 -TestNumbers <n>
+Invoke-AtomicTest T1547.001 -TestNumbers 1 -GetPrereqs
+Invoke-AtomicTest T1547.001 -TestNumbers 1
 ```
 
 Coordinate first; AV/EDR may block or alert on the write.
@@ -38,24 +37,24 @@ Sysmon EID 13 with `TargetObject` ending in a value under `...\CurrentVersion\Ru
 
 ## Rules expected to fire
 
-The DET-013 rule (Sigma level high, Wazuh level 10). Record here, after the
-run: the rule ID, the alert time, and whether a stock rule also fired.
+Rule 100021 (`Registry Run Key Persistence via SetValue [T1547.001]`, level 10).
+Fired at level 10 on Sysmon EID 13 event.
 
 ## Cleanup
 
 ```powershell
-Invoke-AtomicTest T1547.001 -TestNumbers <n> -Cleanup
+Invoke-AtomicTest T1547.001 -TestNumbers 1 -Cleanup
 ```
 
 Then confirm the Run value is gone (`reg query` on the key).
 
 ## Evidence
 
-None yet. When captured, save under `shared/evidence/det013-*.png` and index
+Alert evidence captured in `shared/evidence/det013-rule100021-alert.png` and indexed
 in `shared/evidence-index.md`.
 
 ## Notes
 
-Also the first validation of a rule that went through the AI detection loop:
-after the run, record the validation against the proposal in the Operator
-Console (rule ID, attack, time fired).
+First validation of a rule that went through the AI detection loop:
+proposed by Detection Gap Analyst (PR #7), approved in Operator Console,
+deployed via CI/CD (rule 100021), and validated.

@@ -159,10 +159,7 @@ TACTIC_DISPLAY = {
     "impact": "Impact",
 }
 
-SKIP_FILES = {
-    # temporal_ordered has no Wazuh frequency/timeframe equivalent.
-    "ssh_success_after_failures.yml": "temporal_ordered correlation unsupported by Wazuh",
-}
+SKIP_FILES = {}
 
 
 # --------------------------------------------------------------------------

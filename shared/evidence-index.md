@@ -26,13 +26,14 @@ verified here. Views: **attack** = attacker/victim terminal doing the thing;
 | `det007-rule100011-alert.png` | DET-007, SIEM view of custom rule 100011 |
 | `det011-rule100007-alert.png` | DET-011, SIEM view of custom rule 100007 |
 | `det011-wevtutil-attack.png` | DET-011, attack view (ART T1685.005-4) |
+| `det013-rule100021-alert.png` | DET-013, SIEM view of custom rule 100021 |
 | `n8n-workflow-canvas.png` | SOAR, the 9-node SOC Alert Triage workflow |
 | `n8n-execution-success.png` | SOAR, one successful execution |
 | `telegram-alert-triage.png` | SOAR, Telegram message for rule 100005 |
 | `telegram-alert-triage-92213.png` | SOAR, Telegram message for stock rule 92213 |
 
-What the present files prove: custom rules 100005, 100004, 100006, 100011 and
-100007 each fired at least once (SIEM view), and the SOAR path delivered
+What the present files prove: custom rules 100005, 100004, 100006, 100011,
+100007 and 100021 each fired at least once (SIEM view), and the SOAR path delivered
 messages. Nothing present shows custom rules 100002, 100003, 100008 or
 100009 firing.
 
@@ -111,6 +112,13 @@ custom rule 100002 firing is not evidenced.
 | `evidence/det011-wevtutil-attack.png` | `Screenshot_20260927_182528.png` | Admin PowerShell on windows-victim: Atomic Red Team test **T1685.005-4 "BlackCat Ransomware Full Log Clear"** looping `wevtutil.exe cl "<log>"` across dozens of event-log channels (including Security), ending `Failed to clear log Microsoft-Windows-LiveId/Analytic ... Access is denied. Exit code: -1. Done executing test: T1685.005-4 BlackCat Ransomware Full Log Clear` | Attack view — confirms this ran as an ART atomic test, not a bare manual `wevtutil cl Security` | Present |
 | `evidence/det011-rule100007-alert.png` | `DET-011.png` | Threat Hunting, `rule.id:100007`, 1 hit on windows-victim: `Detection Platform: Windows Security event log cleared (1102) [T1685.005]`, level 10, 2026-09-27 18:22:44 — fired after the `if_sid 63103` parent fix | SIEM view | Present |
 
+## DET-013 — Registry Run Keys / Startup Folder (VALIDATED)
+
+| Suggested file | Source | Shows | Story fit | Status |
+|---|---|---|---|---|
+| `evidence/det013-rule100021-alert.png` | Threat Hunting | Threat Hunting, `rule.id:100021`, 1 hit on windows-victim: `Registry Run Key Persistence via SetValue [T1547.001]`, level 10, 2026-10-16 10:14:22 | SIEM view | Present |
+| Still to capture: `evidence/det013-runkey-attack.png` | — | ART T1547.001 run on windows-victim | Attack view — missing |
+
 ## Module 4 — SOAR triage pipeline
 
 Status reflects what is actually in `shared/evidence/`.
@@ -138,10 +146,10 @@ captured" earlier in this file also still need doing.
 | `evidence/det002-encoded-attack.png` | DET-002 | `powershell -enc …` run (SIEM side is present, rule 100005 firing) |
 | `evidence/det003-cradle-attack.png` | DET-003 | DownloadString+IEX cradle run on windows-victim (SIEM side is present, rule 100004 firing) |
 | `evidence/det004-comsvcs-attack.png` / `evidence/det004-rule100003-alert.png` | DET-004 | ART T1003.001 `rundll32 comsvcs.dll, MiniDump` run + custom rule 100003 firing. Neither view is captured, and the stock-92900 shot is also missing |
-| `evidence/det013-*` | DET-013 | Attack run (ART T1547.001) and the alert for rule 100021 (DET-013), once the run is recorded. See `attack-tests/t1547-001-registry-run-key.md` |
 | `evidence/det006-schtasks-attack.png` | DET-006 | `schtasks /create /tn LabTest …` run on windows-victim |
 | `evidence/det007-sc-create-attack.png` | DET-007 | ART T1543.003 run with overridden `binary_path` on windows-victim (SIEM side is present, rule 100011 firing) |
 | `evidence/det010-hydra-then-login.png` / `evidence/det010-correlation.png` | DET-010 | Hydra burst + one good login from same IP, then the temporal correlation firing |
+| `evidence/det013-runkey-attack.png` | DET-013 | Attack run (ART T1547.001) on windows-victim |
 
 ## Reviewed and not filed
 

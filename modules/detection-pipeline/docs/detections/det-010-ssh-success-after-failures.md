@@ -3,11 +3,11 @@
 | Field | Value |
 |---|---|
 | Detection ID | DET-010 |
-| Rule | Sigma `detections/sigma/ssh_success_after_failures.yml` (3-doc file: 2 base rules + `temporal_ordered` correlation); Wazuh SKIP (no temporal equivalent); no SPL (excluded from autogen) |
+| Rule | Sigma `detections/reference/ssh_success_after_failures.yml` (3-doc file: 2 base rules + `temporal_ordered` correlation); Wazuh: not deployed (`temporal_ordered` unsupported); no SPL |
 | Data source | `/var/log/auth.log` (sshd) via Wazuh agent |
 | ATT&CK | T1110.001 — Password Guessing |
 | Severity | High |
-| Status | UNTESTED |
+| Status | REFERENCE — not deployed (syntax reference for Sigma temporal_ordered correlations) |
 
 ## Logic
 

@@ -2,13 +2,24 @@
 
 An end-to-end detection engineering and security operations platform
 that I built and operate solo: attacks executed in a controlled lab,
-telemetry flowing into a dual-SIEM stack, detections managed as code
-with CI/CD, purple-team validation against real attack execution, and —
-as the platform grows — a threat-intelligence feedback loop and
+telemetry flowing into Wazuh, detections managed as code
+with CI/CD, purple-team validation against real attack execution, and
 analyst-augmented SOAR closing the loop back to human decision.
+Sigma is the single source of truth; CI converts it to Wazuh XML (deployed)
+and Splunk SPL (generated, not deployed — a portability demonstration).
+Only Wazuh is deployed. SPL is produced to prove the detection library is backend-portable.
 Organized as a monorepo: one folder per module, with the detection
 library, attack-test library, and pipeline tooling shared across all of
 them at the platform level.
+
+## What is not here / not done
+
+To be clear about scope and operational realities:
+- **Only Wazuh is deployed.** Splunk is not deployed; SPL searches are generated in CI solely to demonstrate multi-backend Sigma portability.
+- **No autonomous response.** SOAR enriches alerts and suggests actions, but human analysts make every response decision.
+- **Linux auditd detections (DET-008, DET-009) were decommissioned.** After auditd failure on linux-victim (documented in L-001), these rules were removed rather than kept as untested artifacts.
+- **DET-010 is a correlation reference.** `temporal_ordered` correlation is unsupported by Wazuh XML and is kept in `detections/reference/`.
+- **Victim VMs are spun up on demand.** To conserve host memory, VMs remain off until active attack simulation or live demo runs.
 
 ## Getting started
 
@@ -23,15 +34,14 @@ cd detection-platform
 Attack (Parrot / Atomic Red Team)
   |
   v
-Victims (Win10 + Sysmon, Ubuntu + auditd)     [Proxmox VMs]
+Victims (Win10 + Sysmon, Ubuntu)              [Proxmox VMs]
   |
   v
 Wazuh agents (TLS, port 1514)
   |
   v
 Wazuh Manager (VPS, docker single-node)  -->  Wazuh Indexer + Dashboard
-  |                        |
-  |                        +--> (planned) Splunk forwarding
+  |
   v
 Detections (Sigma as code -> CI -> convert -> CD -> Wazuh)
   ^   AI loop: Detection Gap Analyst (n8n) drafts a Sigma PR ->
@@ -39,9 +49,6 @@ Detections (Sigma as code -> CI -> convert -> CD -> Wazuh)
   v
 Alerts -> SOAR (n8n): filter -> dedup -> AbuseIPDB -> AI triage ->
 Telegram -> human decision; Investigation (Threat Hunting)
-  |
-  v
-(planned) Threat intel feedback (honeypots, MISP/OpenCTI) -> detections
 ```
 
 Full platform architecture (network, hosts, remote access) is in
@@ -51,15 +58,14 @@ Full platform architecture (network, hosts, remote access) is in
 
 | Module | Focus | Status |
 |---|---|---|
-| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 13 detections (1 AI-proposed), 9 validated | Complete (DET-013 deployed, validation pending) |
+| [Detection Pipeline](modules/detection-pipeline/README.md) | Sigma→CI/CD→Wazuh, 10 deployable detections (1 AI-proposed), 10/10 validated | Complete |
 | [Adversary Emulation](modules/adversary-emulation/README.md) | ART campaign, purple-team loop; AD domain phase (planned) | Workstream 1 complete; AD phase planned |
 | [Cloud & Identity Security](modules/cloud-identity/README.md) | Entra ID / AWS monitoring, IaC scanning | Planned |
 | [SOAR & Automated Response](modules/soar/README.md) | Wazuh alerts → n8n pipeline → enrichment → AI triage → Telegram, human-in-the-loop | Complete |
 | [Threat Intelligence](modules/threat-intel/README.md) | Honeypots (Cowrie/T-Pot), MISP/OpenCTI, IOC feedback into Detection Pipeline | Not started |
 
-The Detection Pipeline module's 9/13 is the current count of detections
-with a recorded attack run and alert. See Metrics below for the four that
-are not, and why. "Validated" means the alert was observed; for DET-001
+The Detection Pipeline module's 10/10 is the count of deployable detections
+with a recorded validation run and alert. See Metrics below. "Validated" means the alert was observed; for DET-001
 and DET-005 that alert came from a stock Wazuh rule (see
 `shared/evidence-index.md`).
 
@@ -129,24 +135,22 @@ way Detection Pipeline and Adversary Emulation already do.
 
 ## Metrics
 
-- **Detections:** 13 (DET-001…DET-013) across 11 ATT&CK techniques — see
+- **Detections:** 10 (DET-001…DET-007, DET-011…DET-013) across 9 ATT&CK techniques — see
   `modules/detection-pipeline/docs/attack-matrix.md`
-- **Validated:** 9/13 (DET-001, DET-002, DET-003, DET-004, DET-005,
-  DET-006, DET-007, DET-011, DET-012). Caveats: DET-001 was proven by
+- **Validated:** 10/10 deployable detections validated (DET-001, DET-002, DET-003, DET-004, DET-005,
+  DET-006, DET-007, DET-011, DET-012, DET-013). Caveats: DET-001 was proven by
   stock rule 5712 only, DET-005 by stock rules 60109/60110 and EID 4722,
   and the DET-004 custom-rule firing screenshot is not captured
-- **Untested:** DET-008/DET-009 — blocked by an auditd ingestion gap (see
-  `modules/detection-pipeline/docs/known-limitations.md`); DET-010 —
-  manual deployment only (temporal correlation, no Wazuh equivalent)
-- **Pending:** DET-013 — first AI-proposed rule (T1547.001), merged
-  2026-10-04 after human review and deployed as Wazuh rule 100021
-  (2026-10-16); it still needs an ART run to record the alert
-- **Sigma rules:** 13 files (spec v2.1, `sigma check` clean)
-- **Wazuh rules:** 15 custom rules in `custom_rules.xml` — 13 converted
-  from Sigma (IDs 100001–100012 and 100021, from 12 Sigma files) and 2
+- **Decommissioned:** DET-008/DET-009 — removed due to an auditd ingestion gap on linux-victim (see
+  `modules/detection-pipeline/docs/known-limitations.md` L-001)
+- **Reference:** DET-010 — Sigma correlation-syntax reference in `detections/reference/`
+  (temporal correlation unsupported by converter / Wazuh XML)
+- **Sigma rules:** 10 deployable files in `detections/sigma/` (spec v2.1, `sigma check` clean) + 1 reference in `detections/reference/`
+- **Wazuh rules:** 13 custom rules in `custom_rules.xml` — 11 converted
+  from Sigma (from 10 Sigma files) and 2
   hand-written level-0 suppression rules (100013, 100020). New Sigma rules are converted and deployed by
   `convert-deploy.yml`
-- **Splunk SPL:** 12 auto-generated searches (DET-010 excluded)
+- **Splunk SPL:** 10 auto-generated searches (generated in CI to demonstrate backend portability; not deployed)
 - **AI detection loop:** Detection Gap Analyst (n8n) drafts a Sigma rule
   and PR → Operator Console (human gate, merges only on green CI) →
   convert-deploy → Wazuh. Components and what is and is not documented:
@@ -188,9 +192,10 @@ detection-platform/
 │   ├── evidence-index.md        ← screenshot index
 │   └── lessons-learned.md       ← distilled lessons across modules
 ├── detections/
-│   ├── sigma/                   ← source of truth (13 rules)
+│   ├── sigma/                   ← source of truth (10 deployable rules)
+│   ├── reference/               ← correlation-syntax reference (1 rule)
 │   ├── wazuh/                   ← custom_rules.xml, DEPLOY-NOTES.md
-│   └── splunk/                  ← CI-generated *.spl (never hand-edited)
+│   └── splunk/                  ← CI-generated *.spl (portability demonstration)
 ├── attack-tests/                ← one writeup per validated technique
 └── .github/workflows/           ← CI: validate + SPL autogen; convert Sigma→Wazuh; CD: Wazuh deploy
 ```

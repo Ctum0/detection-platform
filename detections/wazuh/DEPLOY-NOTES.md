@@ -24,7 +24,7 @@ Rule ID <-> Sigma rule mapping:
   100013 <-> lsass 92900 FP suppression (level 0, LSM path) — see ../../modules/detection-pipeline/docs/tuning/fp-suppressions.md
   100020 <-> 92213 FP suppression (level 0, PowerShell policy test files) — see ../../modules/detection-pipeline/docs/tuning/fp-suppressions.md
   100021 <-> t1547_001_registry_run_key_persistence_via_setvalue.yml (Sysmon EID 13, DET-013) — DEPLOYED 2026-10-16 by convert-deploy; NOT YET VALIDATED. Validate with ART T1547.001.
-Skipped: ssh_success_after_failures.yml (temporal_ordered unsupported)
+Reference (not deployed): detections/reference/ssh_success_after_failures.yml (temporal_ordered correlation unsupported by Wazuh)
 
 100007 parent fix (2026-09-27): originally anchored on
 `<if_group>windows_security</if_group>`, which never fired — the 1102

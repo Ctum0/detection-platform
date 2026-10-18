@@ -34,19 +34,15 @@ jobs:
 
       - name: Convert Sigma to Splunk SPL
         run: |
-          # Excluded from conversion: detections/sigma/ssh_success_after_failures.yml
-          # uses a temporal_ordered correlation, which the Splunk backend does not
-          # support ("Correlation type 'temporal_ordered' is not supported by
-          # backend"). It is moved aside so the directory conversion succeeds.
+          # Convert all deployable Sigma rules to Splunk SPL. Reference rules
+          # (e.g. temporal_ordered correlations) live in detections/reference/
+          # and are excluded from conversion.
           # NOTE: the "{stem}.spl" template has no {index}, so for multi-doc
           # files (e.g. ssh_bruteforce.yml) only the last doc's query is kept —
           # for ssh_bruteforce.yml that is the event_count correlation, which is
           # the deployable detection.
-          mkdir -p /tmp/sigma-excluded
-          mv detections/sigma/ssh_success_after_failures.yml /tmp/sigma-excluded/
           rm -f detections/splunk/*.spl
           sigma convert -t splunk --without-pipeline detections/sigma/ --output-dir detections/splunk/ --output-filename-template "{stem}.spl"
-          mv /tmp/sigma-excluded/ssh_success_after_failures.yml detections/sigma/
           # Ensure POSIX trailing newlines for clean diffs.
           for f in detections/splunk/*.spl; do
             tail -c1 "$f" | read -r _ || echo >> "$f"

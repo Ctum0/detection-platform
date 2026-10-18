@@ -7,4 +7,6 @@ Validation method, FP notes, Investigation guidance. Statuses mirror
 `../attack-matrix.md` (VALIDATED only with attack + alert evidence indexed
 in `../../../../shared/evidence-index.md`).
 
-DET-013 is PENDING (rule 100021 deployed, attack run not yet recorded).
+All 10 deployable detections are VALIDATED with evidence indexed
+in `../../../../shared/evidence-index.md`. DET-010 is retained as a reference detection
+(not deployed). DET-008 and DET-009 were decommissioned (see L-001 in `../known-limitations.md`).

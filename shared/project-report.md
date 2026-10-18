@@ -18,11 +18,11 @@ approves each one in a web console before it is merged.
 
 | Component | Where | Role |
 |---|---|---|
-| Attack and victim lab | Proxmox: Parrot attacker, Windows 10 with Sysmon, Ubuntu with auditd | Executes Atomic Red Team tests and produces telemetry |
+| Attack and victim lab | Proxmox: Parrot attacker, Windows 10 with Sysmon, Ubuntu | Executes Atomic Red Team tests and produces telemetry |
 | Wazuh 4.14.8 | VPS, Docker single node (manager, indexer, dashboard) | SIEM, rule engine, alert store |
-| Sigma library | `detections/sigma/` (13 rules) | Source of truth for detections |
-| CI: Validate | `.github/workflows/validate.yml` | `sigma check`, generates Splunk SPL (12 searches) |
-| CI: Platform tests | `.github/workflows/tests.yml` | 21 pytest tests for the converter, merge step and rule XML |
+| Sigma library | `detections/sigma/` (10 rules) + `detections/reference/` (1 rule) | Source of truth for detections |
+| CI: Validate | `.github/workflows/validate.yml` | `sigma check`, generates Splunk SPL (10 searches) |
+| CI: Platform tests | `.github/workflows/tests.yml` | 20 pytest tests for the converter, merge step and rule XML |
 | Convert | `.github/workflows/convert-deploy.yml`, `platform/converters/` | Converts new Sigma rules to Wazuh XML, keeps rule IDs stable, reports drift |
 | CD: Deploy | `.github/workflows/deploy-wazuh.yml` (self-hosted runner on the VPS) | Uploads `custom_rules.xml` through the Wazuh API, restarts the manager, verifies every rule ID |
 | SOC Alert Triage | n8n, `modules/soar/` | Wazuh alert, level filter, dedup, AbuseIPDB, LLM triage, Telegram |
@@ -36,15 +36,14 @@ repository and are marked "owner to describe" in
 
 ## 3. Detection inventory
 
-- 13 Sigma detections across 11 ATT&CK techniques.
-- 15 custom Wazuh rules: 100001-100012 and 100021 converted from Sigma,
+- 10 deployable Sigma detections across 9 ATT&CK techniques (plus 1 reference rule).
+- 13 custom Wazuh rules: 100002-100009, 100011, 100012, 100021 converted from Sigma,
   100013 and 100020 hand-written level-0 suppressions.
-- 9 detections have a recorded attack run and alert. DET-001 and DET-005
+- 10/10 deployable detections have a recorded validation run and alert. DET-001 and DET-005
   were proven by stock Wazuh rules, not the custom ones. DET-008 and
-  DET-009 are blocked by an auditd ingestion gap. DET-010 is a temporal
-  correlation with no Wazuh equivalent. DET-013 (T1547.001) was the first
-  AI-proposed rule; it is deployed as rule 100021 (2026-10-16) and still
-  needs an attack run.
+  DET-009 were decommissioned due to an auditd ingestion gap (L-001). DET-010 is a temporal
+  correlation reference with no Wazuh equivalent. DET-013 (T1547.001) was the first
+  AI-proposed rule; it is deployed as rule 100021 and validated on 2026-10-16.
 
 ## 4. What the audit changed
 

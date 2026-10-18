@@ -11,5 +11,5 @@ the [Detection Pipeline](../modules/detection-pipeline/README.md) module:
 Chronological narrative of the campaign that produced these lives in
 `../modules/adversary-emulation/docs/campaign-log.md`.
 
-Not every file here records a completed run: `t1547-001-registry-run-key.md`
-(DET-013) is a procedure only; the rule is deployed (100021), the run is pending.
+All 10 deployable detections have completed validations recorded with
+evidence in `shared/evidence-index.md` (including `t1547-001-registry-run-key.md` / DET-013).
