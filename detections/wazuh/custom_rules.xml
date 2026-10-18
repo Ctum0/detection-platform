@@ -125,4 +125,15 @@
     </mitre>
   </rule>
 
+  <rule id="100022" level="7">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)(?:\\at\.exe)$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i).*(?:/create).*</field>
+    <field name="win.eventdata.commandLine" type="pcre2" negate="yes">(?i).*(?:system32\\|windows\\system32\\|program\ files\\).*</field>
+    <description>At Command Used for Scheduled Job Creation [T1053.002]</description>
+    <mitre>
+      <id>T1053.002</id>
+    </mitre>
+  </rule>
+
 </group>
