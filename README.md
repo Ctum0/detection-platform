@@ -43,6 +43,21 @@ To be clear about scope and operational realities:
 - **DET-010 is a correlation reference.** `temporal_ordered` correlation is unsupported by Wazuh XML and is kept in `detections/reference/`.
 - **Victim VMs are spun up on demand.** To conserve host memory, VMs remain off until active attack simulation or live demo runs.
 
+## Security, Scope & Operational Disclaimer
+
+This repository is an **experimental detection engineering platform, reference architecture, and research testbed**. It is designed to demonstrate detection-as-code lifecycles, automated multi-backend Sigma compilation, and purple-team validation loops.
+
+When deploying, reviewing, or extending this platform, consider the following operational security boundaries:
+
+- **Isolated Lab Environment Only**: Attack emulation harnesses (e.g. Atomic Red Team tests in `attack-tests/`) execute real offensive techniques (PowerShell download cradles, LSASS dumping emulation, persistence mechanisms). These must **strictly** be executed against isolated, non-production virtual machines (e.g. Proxmox sandbox VMs). Never execute attack tests on production networks.
+- **Research & Demonstration Posture**: The platform and its companion [Operator Console](https://github.com/Ctum0/operator-console) demonstrate architecture and workflow concepts. They are not pre-hardened for internet-facing multi-tenant deployments without additional enterprise perimeter controls.
+- **Enterprise Hardening Considerations**:
+  - *Authentication*: In production, replace shared bearer tokens with enterprise SSO/OIDC (Okta, Azure AD), hardware MFA, and Role-Based Access Control (RBAC).
+  - *Network Perimeter*: Restrict the Wazuh manager API, console, and SOAR webhooks behind an Identity-Aware Proxy (IAP), VPN, or private overlay network (e.g. Tailscale).
+  - *Secrets Management*: Secrets (GitHub fine-grained PATs, Wazuh credentials, n8n webhook secrets) are passed via environment variables. In an enterprise SOC, integrate with a dedicated vault (HashiCorp Vault, AWS Secrets Manager).
+  - *Rule Transpilation*: Custom regex patterns in user-authored Sigma rules should be audited for ReDoS complexity before deployment to high-throughput log pipelines.
+- **Responsible Disclosure**: If you discover a security vulnerability or sensitive data exposure, please consult [`SECURITY.md`](SECURITY.md) for reporting guidelines rather than filing a public issue.
+
 ## Getting started
 
 ```bash
