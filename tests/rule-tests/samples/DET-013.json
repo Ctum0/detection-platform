@@ -17,5 +17,21 @@
         "details": "C:\\Temp\\beacon.exe"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 13
+      },
+      "eventdata": {
+        "targetObject": "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\LegitInstaller",
+        "image": "C:\\Windows\\System32\\msiexec.exe",
+        "details": "C:\\Program Files\\App\\app.exe"
+      }
+    }
+  },
+  "benign_rationale": "Legitimate Windows Installer (msiexec.exe) registering startup keys is explicitly excluded and must not trigger alert 100021."
 }

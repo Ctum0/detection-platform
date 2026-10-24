@@ -16,5 +16,20 @@
         "serviceName": "EvilService"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Service Control Manager",
+        "channel": "System",
+        "severityValue": "INFORMATION",
+        "eventID": 7045
+      },
+      "eventdata": {
+        "imagePath": "C:\\Program Files\\Windows Defender\\MsMpEng.exe",
+        "serviceName": "WinDefend"
+      }
+    }
+  },
+  "benign_rationale": "Legitimate enterprise services installed under Program Files must not trigger suspicious path alerts."
 }

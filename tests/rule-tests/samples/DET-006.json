@@ -16,5 +16,19 @@
         "taskContent": "<Task><Actions><Exec><Command>calc.exe</Command></Exec></Actions></Task>"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Security-Auditing",
+        "channel": "Security",
+        "severityValue": "AUDIT_SUCCESS",
+        "eventID": 4699
+      },
+      "eventdata": {
+        "taskName": "\\RoutineMaintenance"
+      }
+    }
+  },
+  "benign_rationale": "Scheduled task deletion (4699) or routine security audits must not trigger task creation (4698) alerts."
 }

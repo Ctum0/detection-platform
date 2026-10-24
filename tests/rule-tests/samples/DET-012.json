@@ -15,5 +15,20 @@
         "image": "C:\\Windows\\System32\\notepad.exe"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 1
+      },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\cmd.exe",
+        "commandLine": "cmd.exe /c dir"
+      }
+    }
+  },
+  "benign_rationale": "Standard non-notepad process creation events must not trigger the canary alert (100012)."
 }

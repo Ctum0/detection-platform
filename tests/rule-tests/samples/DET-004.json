@@ -17,5 +17,21 @@
         "sourceImage": "C:\\Temp\\mimikatz.exe"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 10
+      },
+      "eventdata": {
+        "targetImage": "C:\\Windows\\System32\\services.exe",
+        "grantedAccess": "0x1400",
+        "sourceImage": "C:\\Windows\\System32\\svchost.exe"
+      }
+    }
+  },
+  "benign_rationale": "Routine OS service interrogation between svchost and services.exe must not trigger LSASS credential dumping alerts."
 }

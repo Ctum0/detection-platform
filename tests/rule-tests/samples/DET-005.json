@@ -15,5 +15,20 @@
         "targetUserName": "lab_test_user"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Security-Auditing",
+        "channel": "Security",
+        "severityValue": "AUDIT_SUCCESS",
+        "eventID": 4624
+      },
+      "eventdata": {
+        "targetUserName": "operator",
+        "logonType": "2"
+      }
+    }
+  },
+  "benign_rationale": "Standard user logon audit events (4624) must not trigger user creation (4720) alerts."
 }

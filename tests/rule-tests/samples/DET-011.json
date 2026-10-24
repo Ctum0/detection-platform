@@ -15,5 +15,19 @@
         "subjectUserName": "operator"
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Security-Auditing",
+        "channel": "Security",
+        "severityValue": "AUDIT_SUCCESS",
+        "eventID": 4624
+      },
+      "eventdata": {
+        "targetUserName": "administrator"
+      }
+    }
+  },
+  "benign_rationale": "Normal security audit log traffic must not trigger log clearing alerts (1102)."
 }

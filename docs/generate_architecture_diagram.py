@@ -1,0 +1,360 @@
+#!/usr/bin/env python3
+"""Generate a balanced, clean, enterprise architecture diagram for the Detection Platform.
+Outputs:
+- docs/images/architecture.dot
+- docs/images/architecture.svg
+- docs/images/architecture.png
+"""
+
+import subprocess
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = PROJECT_ROOT / "docs" / "images"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+DOT_SOURCE = """digraph DetectionPlatformArchitecture {
+    graph [
+        rankdir="TB",
+        splines="spline",
+        nodesep="0.55",
+        ranksep="0.65",
+        bgcolor="#FFFFFF",
+        fontname="Helvetica, Arial, sans-serif",
+        fontsize="13",
+        fontcolor="#0F172A",
+        pad="0.4",
+        compound=true
+    ];
+
+    node [
+        fontname="Helvetica, Arial, sans-serif",
+        fontsize="9.5",
+        shape="box",
+        style="filled,rounded",
+        penwidth="1.2",
+        margin="0.18,0.12"
+    ];
+
+    edge [
+        fontname="Helvetica, Arial, sans-serif",
+        fontsize="8.5",
+        fontcolor="#334155",
+        color="#64748B",
+        penwidth="1.1",
+        arrowsize="0.75"
+    ];
+
+    // ===================================================
+    // TIER 1: THREAT EMULATION & LAB TELEMETRY COLLECTION
+    // ===================================================
+    subgraph cluster_tier1 {
+        label="  1. THREAT EMULATION &amp; ENDPOINT TELEMETRY (Isolated Proxmox Lab)  ";
+        labelloc="t";
+        labeljust="l";
+        style="filled,rounded";
+        color="#CBD5E1";
+        bgcolor="#F8FAFC";
+        fontcolor="#0F172A";
+        fontsize="11";
+        penwidth="1.3";
+
+        art_attacker [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Adversary Emulation Engine</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Atomic Red Team &amp; Kali Linux</font></td></tr>
+                <tr><td><font point-size="7.5" color="#B45309">T1059.001 (PS), T1003.001 (LSASS), T1053.005</font></td></tr>
+            </table>>,
+            fillcolor="#FEF3C7",
+            color="#D97706"
+        ];
+
+        win_victim [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Windows 10 Victim VM</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">SwiftOnSecurity Modular Sysmon</font></td></tr>
+                <tr><td><font point-size="7.5" color="#0369A1">EID 1 (Process), EID 3 (Net), EID 13 (Reg), Sec 4624</font></td></tr>
+            </table>>,
+            fillcolor="#F0F9FF",
+            color="#0284C7"
+        ];
+
+        wazuh_agent [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Wazuh Endpoint Agent</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Encrypted Transport Layer</font></td></tr>
+                <tr><td><font point-size="7.5" color="#4F46E5">mTLS over Tailscale Mesh (Port 1514)</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#0284C7"
+        ];
+
+        art_attacker -> win_victim [label=" Execute TTPs", color="#D97706", fontcolor="#B45309"];
+        win_victim -> wazuh_agent [label=" Event Logs"];
+    }
+
+    // ===================================================
+    // TIER 2: DETECTION-AS-CODE (CI/CD PIPELINE)
+    // ===================================================
+    subgraph cluster_tier2 {
+        label="  2. DETECTION-AS-CODE (DaC) CI/CD PIPELINE  ";
+        labelloc="t";
+        labeljust="l";
+        style="filled,rounded";
+        color="#CBD5E1";
+        bgcolor="#F8FAFC";
+        fontcolor="#0F172A";
+        fontsize="11";
+        penwidth="1.3";
+
+        sigma_repo [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Sigma Rule Library (Git)</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">detections/rules/*.yml</font></td></tr>
+                <tr><td><font point-size="7.5" color="#4F46E5">Single Source of Truth (SSOT)</font></td></tr>
+            </table>>,
+            fillcolor="#EEF2FF",
+            color="#4F46E5"
+        ];
+
+        ci_lint [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Automated CI Gates</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">GitHub Actions CI Workflows</font></td></tr>
+                <tr><td><font point-size="7.5" color="#4F46E5">PySigma Lint &amp; Schema Validation</font></td></tr>
+            </table>>,
+            fillcolor="#EEF2FF",
+            color="#4F46E5"
+        ];
+
+        multi_transpiler [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Multi-Backend Transpiler</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">pySigma &amp; Dialect Adapters</font></td></tr>
+                <tr><td><font point-size="7.5" color="#047857">Splunk SPL | Sentinel KQL | CrowdStrike CQL</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#4F46E5"
+        ];
+
+        deploy_cd [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>CD Deployment Gate</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Wazuh XML Synthesis &amp; Packaging</font></td></tr>
+                <tr><td><font point-size="7.5" color="#16A34A">Automated Deploy to VPS Manager</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#16A34A"
+        ];
+
+        sigma_repo -> ci_lint [label=" Git Push / PR"];
+        ci_lint -> multi_transpiler [label=" Pass Lint"];
+        multi_transpiler -> deploy_cd [label=" Compile Rules"];
+    }
+
+    // ===================================================
+    // TIER 3: SIEM CORE & DETECTION ENGINE (VPS CLOUD)
+    // ===================================================
+    subgraph cluster_tier3 {
+        label="  3. SIEM CORE &amp; DETECTION ENGINE (VPS Cloud)  ";
+        labelloc="t";
+        labeljust="l";
+        style="filled,rounded";
+        color="#CBD5E1";
+        bgcolor="#F8FAFC";
+        fontcolor="#0F172A";
+        fontsize="11";
+        penwidth="1.3";
+
+        wazuh_manager [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Wazuh SIEM Manager (v4.14.8)</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Docker Single-Node / Analysisd Engine</font></td></tr>
+                <tr><td><font point-size="7.5" color="#16A34A">XML Decoders + Sigma Custom Rule Evaluator</font></td></tr>
+            </table>>,
+            fillcolor="#F0FDF4",
+            color="#16A34A"
+        ];
+
+        wazuh_indexer [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Wazuh Indexer &amp; Dashboard</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">OpenSearch Analytics Cluster</font></td></tr>
+                <tr><td><font point-size="7.5" color="#16A34A">Alert Indexing, Storage &amp; Visualizations</font></td></tr>
+            </table>>,
+            fillcolor="#F0FDF4",
+            color="#16A34A"
+        ];
+
+        wazuh_manager -> wazuh_indexer [label=" Index Alerts &amp; Telemetry"];
+    }
+
+    // ===================================================
+    // TIER 4: SOC OPERATOR CONSOLE & SOAR OPERATIONS
+    // ===================================================
+    subgraph cluster_tier4 {
+        label="  4. SOC OPERATOR CONSOLE &amp; SOAR AUTOMATION  ";
+        labelloc="t";
+        labeljust="l";
+        style="filled,rounded";
+        color="#CBD5E1";
+        bgcolor="#F8FAFC";
+        fontcolor="#0F172A";
+        fontsize="11";
+        penwidth="1.3";
+
+        console_api [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Operator Console API</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">FastAPI REST Control Plane</font></td></tr>
+                <tr><td><font point-size="7.5" color="#7C3AED">Rule Lifecycle, Transpiler &amp; State API</font></td></tr>
+            </table>>,
+            fillcolor="#FAF5FF",
+            color="#7C3AED"
+        ];
+
+        ide_studio [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Detection Studio IDE</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Interactive Sigma Authoring</font></td></tr>
+                <tr><td><font point-size="7.5" color="#7C3AED">Live SPL / KQL / CQL Preview</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#7C3AED"
+        ];
+
+        sim_engine [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Simulation Playground</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Victimless Telemetry Replay</font></td></tr>
+                <tr><td><font point-size="7.5" color="#0284C7">Multi-Stage Sysmon Verification</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#0284C7"
+        ];
+
+        gov_queue [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Review Queue &amp; Governance</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">PR Inspection &amp; CI Checks</font></td></tr>
+                <tr><td><font point-size="7.5" color="#B45309">Two-Step Guarded Approval</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#D97706"
+        ];
+
+        mitre_matrix [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>ATT&amp;CK Matrix &amp; Reporting</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Coverage Heatmap &amp; Metrics</font></td></tr>
+                <tr><td><font point-size="7.5" color="#16A34A">100% Proven Rules &amp; Navigator JSON</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#16A34A"
+        ];
+
+        soar_engine [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>n8n SOAR Workflows</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Automation Engine</font></td></tr>
+                <tr><td><font point-size="7.5" color="#D97706">Alert Deduplication &amp; Triage</font></td></tr>
+            </table>>,
+            fillcolor="#FFFBEB",
+            color="#D97706"
+        ];
+
+        threat_intel [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>Threat Intelligence</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">External Reputation APIs</font></td></tr>
+                <tr><td><font point-size="7.5" color="#D97706">AbuseIPDB, VirusTotal</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#D97706"
+        ];
+
+        analyst_gate [
+            label=<<table border="0" cellborder="0" cellspacing="1">
+                <tr><td><b>SOC Analyst Action Gate</b></td></tr>
+                <tr><td><font point-size="8" color="#64748B">Human-in-the-Loop</font></td></tr>
+                <tr><td><font point-size="7.5" color="#16A34A">Telegram Alert &amp; Containment</font></td></tr>
+            </table>>,
+            fillcolor="#FFFFFF",
+            color="#16A34A"
+        ];
+
+        console_api -> ide_studio;
+        console_api -> sim_engine;
+        console_api -> gov_queue;
+        console_api -> mitre_matrix;
+        soar_engine -> threat_intel [dir="both", label=" Enrich"];
+        soar_engine -> analyst_gate [label=" Alert"];
+    }
+
+    // ===================================================
+    // INTER-TIER DIRECTED FLOW PIPELINES
+    // ===================================================
+    
+    // Tier 1 -> Tier 3 (Telemetry Forwarding)
+    wazuh_agent -> wazuh_manager [
+        label=" Forward Telemetry (mTLS 1514 over Tailscale)",
+        color="#0284C7",
+        fontcolor="#0284C7",
+        penwidth="1.3"
+    ];
+
+    // Tier 2 -> Tier 3 (Rule Deployment)
+    deploy_cd -> wazuh_manager [
+        label=" Auto-Deploy XML Rules (Manager API)",
+        color="#16A34A",
+        fontcolor="#16A34A",
+        penwidth="1.3"
+    ];
+
+    // Tier 3 -> Tier 4 (Alert Webhook to SOAR)
+    wazuh_manager -> soar_engine [
+        label=" High-Severity Alert Webhook",
+        color="#D97706",
+        fontcolor="#D97706",
+        penwidth="1.2"
+    ];
+
+    // Tier 4 -> Tier 2 (Governance Merge to Git)
+    gov_queue -> sigma_repo [
+        label=" Merge Approved Rule PR",
+        color="#4F46E5",
+        fontcolor="#4F46E5",
+        penwidth="1.2"
+    ];
+
+    // Tier 4 -> Tier 3 (Console querying Wazuh)
+    console_api -> wazuh_manager [
+        label=" Sync Rule &amp; Alert State",
+        color="#7C3AED",
+        fontcolor="#7C3AED",
+        style="dashed"
+    ];
+}
+"""
+
+def main():
+    dot_path = OUTPUT_DIR / "architecture.dot"
+    svg_path = OUTPUT_DIR / "architecture.svg"
+    png_path = OUTPUT_DIR / "architecture.png"
+
+    print(f"Writing Graphviz source to {dot_path}...")
+    dot_path.write_text(DOT_SOURCE, encoding="utf-8")
+
+    print(f"Compiling vector SVG to {svg_path}...")
+    subprocess.run(["dot", "-Tsvg", str(dot_path), "-o", str(svg_path)], check=True)
+
+    print(f"Compiling high-resolution 200 DPI PNG to {png_path}...")
+    subprocess.run(["dot", "-Tpng", "-Gdpi=200", str(dot_path), "-o", str(png_path)], check=True)
+
+    print("Success! Generated files:")
+    print(f"  - {dot_path} ({dot_path.stat().st_size} bytes)")
+    print(f"  - {svg_path} ({svg_path.stat().st_size} bytes)")
+    print(f"  - {png_path} ({png_path.stat().st_size} bytes)")
+
+if __name__ == "__main__":
+    main()

